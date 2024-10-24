@@ -1,0 +1,84 @@
+@startuml "entity relation SQL + NoSQL"
+!theme carbon-gray
+
+entity User {
+  +id: number <<PK>>
+  +name: string
+  +email: string
+  +password: string
+  +status: string
+  +company_name: string
+  +role_id: number <<FK>>
+  +created_at: Date
+}
+
+entity Role {
+  +id: number <<PK>>
+  +name: string
+}
+
+entity Course <<NoSQL>> {
+  +id: string <<PK>> // Utilisation d'un identifiant unique pour MongoDB
+  +title: string
+  +description: string
+  +status: string
+  +tutor_id: number <<FK>> // Référence à un utilisateur dans PostgreSQL
+  +modules: List of Module
+  +created_at: Date
+  +updated_at: Date
+}
+
+entity Module <<NoSQL>> {
+  +id: string <<PK>>
+  +content_type: string
+  +content_value: string
+  +position: number
+}
+
+entity Message {
+  +id: number <<PK>>
+  +sender_id: number <<FK>>
+  +receiver_id: number <<FK>>
+  +content: string
+  +timestamp: Date
+  +status: string
+}
+
+entity Notification {
+  +id: number <<PK>>
+  +user_id: number <<FK>>
+  +content: string
+  +timestamp: Date
+  +status: string
+  +type: string
+}
+
+entity Collaboration {
+  +id: number <<PK>>
+  +collaborator_id: number <<FK>>
+  +tutor_id: number <<FK>>
+  +created_at: Date
+  +status: string
+}
+
+note right of Course
+  modules: List of Module
+  Chaque Module contient :
+    - content_type: string
+    - content_value: string
+    - position: number
+  Choix d'une BDD Mongo car les cours seront évolutifs
+end note
+
+User ||--o{ Role : "1" has "many"
+User ||--o{ Message : "1" sends "many"
+User ||--o{ Message : "1" receives "many"
+User ||--o{ Notification : "1" notifies "many"
+User ||--o{ Course : "1 enseigne plusieurs cours" // Référence au tutor_id
+
+Course ||--o{ Module : "Un cours contient plusieurs modules" 
+
+Collaboration ||--o{ User : "Un collaborateur a un tuteur"
+Collaboration }o--|| User : "Un tuteur a plusieurs collaborateurs"
+
+@enduml

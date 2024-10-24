@@ -1,0 +1,118 @@
+@startuml "Class diagramm"
+!theme carbon-gray
+
+class User {
+  +id: number
+  +name: string
+  +email: string
+  +password: string
+  +role: string
+  +status: string
+  +updateProfile(): void
+}
+
+class Tutor extends User {
+  +courses: List<Course>
+  +createCourse(): void
+  +updateCourse(): void
+  +deleteCourse(): void
+  +addCollaborators(): void
+  +deleteCollaborators(id : string): void
+}
+
+class Collaborator extends User {
+  +enrolledCourses: List<Course>
+  +enrollInCourse(id : string): void
+  +unenrollFromCourse(id : string): void
+}
+
+class Admin extends User {
+  +manageTutors(): void
+  +manageCollaborators(): void
+  +manageCourses(): void
+}
+
+class Course {
+  +id: number
+  +title: string
+  +description: string
+  +status: string
+  +tutor: Tutor
+  +collaborators: List<Collaborator>
+  +modules: List<Module>
+  +addModule(): void
+  +updateModule(id : string):void
+  +removeModule(id : string): void
+}
+
+class Module {
+  +id: number
+  +title: string
+  +content: ModuleContent
+  +course: Course
+}
+
+abstract class ModuleContent {
+  +id: number
+  +module: Module
+}
+
+class WebLink extends ModuleContent {
+  +url: string
+}
+
+class TextContent extends ModuleContent {
+  +text: string
+}
+
+class PDFFile extends ModuleContent {
+  +filePath: string
+}
+
+class Message {
+  +id: number
+  +sender: User
+  +receiver: User
+  +content: string
+  +timestamp: Date
+  +status: string
+  +attachments: List<Attachment>
+  +sendMessage(): void
+  +replyToMessage(): void
+}
+
+class Attachment {
+  +id: number
+  +file: string
+  +message: Message
+}
+
+class Email {
+  +id: number
+  +sender: User
+  +receiver: User
+  +subject: string
+  +body: string
+  +timestamp: Date
+  +status: string
+  +attachments: List<Attachment>
+  +sendEmail(): void
+}
+
+User "1" -- "*" Course : enrolledIn
+Tutor "1" -- "*" Course : teaches
+Collaborator "1" -- "*" Course : enrolledIn
+User "1" -- "*" Message : sends
+User "1" -- "*" Message : receives
+User "1" -- "*" Email : sends
+User "1" -- "*" Email : receives
+Course "1" -- "*" Module : contains
+Message "1" -- "*" Attachment : has
+Email "1" -- "*" Attachment : has
+
+Module "1" -- "1" ModuleContent : contains
+ModuleContent <|-- WebLink
+ModuleContent <|-- TextContent
+ModuleContent <|-- PDFFile
+
+@enduml

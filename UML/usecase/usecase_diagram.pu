@@ -1,0 +1,50 @@
+@startuml 'usecase diagram'
+left to right direction
+
+actor Collaborator
+actor Tutor
+actor Admin
+
+rectangle "LMS System" {
+    package "Course Management" {
+        usecase "Create / Update Course" as UC1
+        usecase "Delete Course" as UC2
+        usecase "Manage Courses" as UC9
+    }
+
+    package "Collaborator Management" {
+        usecase "Add/Remove Collaborator" as UC3
+    }
+
+    package "Communication" {
+        usecase "Communicate with Collaborators" as UC4
+    }
+
+    package "Course Participation" {
+        usecase "Follow Courses" as UC6
+    }
+
+    package "Admin Management" {
+        usecase "Manage Tutors" as UC7
+        usecase "Manage Collaborators" as UC8
+    }
+}
+
+Tutor --> UC1
+Tutor --> UC2
+Tutor --> UC3
+Tutor --> UC4
+Tutor --> UC9
+
+Collaborator --> UC6
+Collaborator --> UC4
+
+Admin --> UC7
+Admin --> UC8
+Admin --> UC9
+
+
+Tutor --|> Collaborator : includes
+Admin --|> Tutor :includes
+
+@enduml
