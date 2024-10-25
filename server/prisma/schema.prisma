@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRESQL_DB_URI")
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  name String
+  lastname String
+  email String         @unique
+  password String
+  status String
+  company_name String?
+  role Role @relation(fields: [role_id], references: [id])
+  role_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt()  
+  sent_messages Message[] @relation("SentMessages")
+  received_messages Message[] @relation("ReceivedMessages")
+  notifications     Notification[]
+  collaborations_as_collaborator Collaboration[] @relation("CollaboratorRelation")
+  collaborations_as_tutor Collaboration[] @relation("TutorRelation")
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String
+  users User[]
+}
+
+model Message {
+  id Int @id @default(autoincrement())
+  sender User @relation("SentMessages", fields: [sender_id], references: [id])
+  sender_id Int
+  receiver User @relation("ReceivedMessages", fields: [receiver_id], references: [id])
+  receiver_id Int
+  content String
+  timestamp DateTime @default(now())
+  status String
+}
+
+model Notification {
+  id Int @id @default(autoincrement())
+  user User @relation(fields: [user_id], references: [id])
+  user_id Int
+  content String
+  timestamp DateTime @default(now())
+  status String
+  type String
+}
+
+model Collaboration {
+  id Int @id @default(autoincrement())
+  collaborator User @relation("CollaboratorRelation", fields: [collaborator_id], references: [id])
+  collaborator_id Int
+  tutor User @relation("TutorRelation", fields: [tutor_id], references: [id])
+  tutor_id Int
+  created_at DateTime @default(now())
+  status String
+}

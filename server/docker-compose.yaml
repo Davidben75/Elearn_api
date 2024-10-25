@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  postgres-dev-db:
+    image: postgres:14
+    container_name: lms_postgres
+    environment:
+      POSTGRES_USER: davidpostgres
+      POSTGRES_PASSWORD: 3f04bae72ad4bdc46b29dcd55e31da9a91a40cd8185995343dbe8093b41119e7
+      POSTGRES_DB: mylms
+    ports:
+      - '5435:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - lms_network
+
+  mongo-dev-db:
+    image: mongo:5
+    container_name: lms_mongo
+    environment:
+      MONGO_INITDB_DATABASE: course
+      MONGO_INITDB_ROOT_USERNAME: davidmongo
+      MONGO_INITDB_ROOT_PASSWORD: bb26d3086e48ab42e90dffe68bb8bdfc5c678b0ffc27831fc59f77ae4c9065a6
+      TZ: Europe/Paris
+    ports:
+      - '27018:27017'
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - lms_network
+
+  mongo-admin:
+    image: mongo-express
+    container_name: lms_mongo_express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: davidmongo
+      ME_CONFIG_MONGODB_ADMINPASSWORD: bb26d3086e48ab42e90dffe68bb8bdfc5c678b0ffc27831fc59f77ae4c9065a6
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_SERVER: mongo-dev-db
+      ME_CONFIG_MONGODB_DATABASE: course
+    ports:
+      - 8082:8081
+    depends_on:
+      - mongo-dev-db
+    networks:
+      - lms_network
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+networks:
+  lms_network:
+    driver: bridge
