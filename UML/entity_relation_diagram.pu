@@ -4,6 +4,7 @@
 entity User {
   +id: number <<PK>>
   +name: string
+  +lastname: string
   +email: string
   +password: string
   +status: string
