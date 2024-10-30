@@ -18,7 +18,7 @@ entity Role {
 }
 
 entity Course <<NoSQL>> {
-  +id: string <<PK>> // Utilisation d'un identifiant unique pour MongoDB
+  +id: string ObjectId
   +title: string
   +description: string
   +status: string
@@ -29,10 +29,9 @@ entity Course <<NoSQL>> {
 }
 
 entity Module <<NoSQL>> {
-  +id: string <<PK>>
+  +id: ObjectId
   +content_type: string
   +content_value: string
-  +position: number
 }
 
 entity Message {
@@ -66,7 +65,6 @@ note right of Course
   Chaque Module contient :
     - content_type: string
     - content_value: string
-    - position: number
   Choix d'une BDD Mongo car les cours seront évolutifs
 end note
 

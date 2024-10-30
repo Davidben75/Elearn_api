@@ -1,42 +1,38 @@
-@startuml 'Course creation'
+@startuml 'Course creation with centralized service logic'
 
 actor Tutor
-participant "Tutor Controller" as TutorController
-participant "Auth Middleware" as AuthMiddleware
-participant "Tutor Service" as TutorService
+participant "Course Controller" as CourseController
+participant "Auth Guard" as AuthGuard
 participant "Course Service" as CourseService
 participant "Database" as Database
 participant "Email Service" as EmailService
-participant "Collaborator Service" as CollaboratorService
+participant "User Service" as UsersService
 
-Tutor -> TutorController: Request to create course
-TutorController -> AuthMiddleware: Validate JWT
+Tutor -> CourseController: Request to create course
+CourseController -> AuthGuard: Validate JWT and permissions
 alt Session validated
-    AuthMiddleware -> TutorController: Session validated
-    TutorController -> CourseService: Create course with details (PDF, video link, web page link, text)
+    AuthGuard -> CourseController: Session and role validated
+    CourseController -> CourseService: Create course with details (PDF, video link, web page link, text)
+
     CourseService -> Database: Save course details
     Database -> CourseService: Course saved
-    CourseService -> TutorController: Course created successfully
 
-    TutorController -> CollaboratorService: Get list of collaborators
-    CollaboratorService -> Database: Fetch collaborators
-    Database -> CollaboratorService: Collaborators list
-    CollaboratorService -> TutorController: Return collaborators list
+    CourseService -> UsersService: Get list of collaborators for tutor
+    UsersService -> Database: Fetch collaborators
+    Database -> UsersService: Collaborators list
+    UsersService -> CourseService: Return collaborators list
 
-    TutorController -> Tutor: Display collaborators list
-    Tutor -> TutorController: Choose specific collaborators or all collaborators
-    TutorController -> CourseService: Assign collaborators to the course
-    CourseService -> Database: Save collaborators for the course
+    CourseService -> Database: Assign collaborators to course
     Database -> CourseService: Collaborators assigned
-    CourseService -> TutorController: Collaborators assigned successfully
 
-    TutorController -> EmailService: Send email to selected collaborators
-    EmailService -> TutorController: Email sent successfully
+    CourseService -> EmailService: Send email to all collaborators
+    EmailService -> CourseService: Email sent successfully
 
-    TutorController -> Tutor: Course created and collaborators notified
+    CourseService -> CourseController: Course created successfully
+    CourseController -> Tutor: Course created and collaborators notified
 else Session not validated
-    AuthMiddleware -> TutorController: Session not validated
-    TutorController -> Tutor: Notify session not validated
+    AuthGuard -> CourseController: Session not validated
+    CourseController -> Tutor: Notify session not validated
 end
 
 @enduml

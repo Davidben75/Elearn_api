@@ -1,73 +1,192 @@
-@startuml "Class diagramm"
+@startuml "Class Diagram"
 !theme carbon-gray
 
-class User {
-  +id: number
+' --- Controllers ---
+class UserController {
+  +addNewLearner(learnerDto: RegisterLearnerDto, tutorId: number): User
+  +updateUser(userDto?: UserWithRoleDto): void
+  +deleteUser(userId: number): void
+  +getUser(): User
+  +getAllUserByTutorId(tutorId : number): User[]
+  +getAllUsers(paginationDto : PaginationDto): User[]
+}
+
+class CollaborationController {
+  +addCollaboration(learner: UserWithRoleDto, tutorId: number): void
+  +updateCollaboration(collab :CollaborationDto): void
+  +deleteCollaboration(collabId: number): void
+}
+
+class CourseController {
+  +createCourse(CourseDto: CourseDto): Course
+  +updateCourse(courseId: ObjectId, updateCourseDto: CourseDto): void
+  +deleteCourse(courseId: ObjectId): void
+  +getCourseById(courseId: ObjectId): Course
+  +getAllCourses(paginationDto : PaginationDto): Course[]
+  +getAllCoursesByTutorId(paginationDto : PaginationDto): CourseDto[]
+  +markCourseAsCompleted(courseId : ObjectId, userId: number): void
+}
+
+class MessageController {
+  +sendMessage(sendMessageDto: SendMessageDto): void
+  +getReceivedMessages(userId: number): Message[]
+  +getSentMessages(userId: number): Message[]
+}
+
+class AuthController {
+  +register(registerDto: RegisterDto): User
+  +login(loginDto: LoginDto): string
+}
+
+' --- Services ---
+class UserService {
+  +addNewLearner(learnerDto: RegisterLearnerDto, tutorId: number): User
+  +updateUser(userId: number, userDto?: UserWithRoleDto): void
+  +deleteUser(userId: number): void
+  +getUser(userId : number): User
+  +isValidUser(user : User) : boolean 
+  +getAllUserByTutorId(tutorId: number): User[]
+  +getAllUsers(): User[]
+}
+
+class CollaborationService {
+  +addCollaboration(learnerId: number, tutorId: number): void
+  +updateCollaboration(collab :CollaborationDto): void
+  +deleteCollaboration(collabId: number): void
+  +isCollaborationExists(learnerId: number, tutorId: number): boolean
+}
+
+class CourseService {
+  +createCourse(CourseDto: CourseDto): Course
+  +updateCourse(courseId: ObjectId, CourseDto: CourseDto): void
+  +deleteCourse(courseId: ObjectId): void
+  +getCourseById(courseId: ObjectId): CourseDto
+  +getAllCourses(): CourseDto[]
+  +getAllCoursesByTutorId(tutorId: number): CourseDto[]
+  +markCourseAsCompleted(courseId: ObjectId, userId: number): void
+}
+
+class MessageService {
+  +sendMessage(sendMessageDto: SendMessageDto): void
+  +getReceivedMessages(userId: number): Message[]
+  +getSentMessages(userId: number): Message[]
+}
+
+class AuthService {
+  +registerUser(registerDto: RegisterDto): User
+  +validateUser(user: User): User
+  +login(loginDto: LoginDto): string
+  +generateToken(user: User): string
+}
+
+class MailService {
+  +sendMailNewCourse(courseDto: CourseDto, users: User[]): void
+  +sendMailCourseUpdate(courseDto: CourseDto, users: User[]): void
+  +sendMailWelcomeWithCredentials(leanerCredentialsMail: LearnerCredentialMailDto): void
+}
+
+' --- Data Transfer Objects (DTOs) ---
+class RegisterDto {
   +name: string
   +email: string
   +password: string
-  +role: string
-  +status: string
-  +updateProfile(): void
+  +lastName: string
+  +companyName: string
 }
 
-class Tutor extends User {
-  +courses: List<Course>
-  +createCourse(): void
-  +updateCourse(): void
-  +deleteCourse(): void
-  +addCollaborators(): void
-  +deleteCollaborators(id : string): void
+class LoginDto {
+  +email: string
+  +password: string
 }
 
-class Collaborator extends User {
-  +enrolledCourses: List<Course>
-  +enrollInCourse(id : string): void
-  +unenrollFromCourse(id : string): void
+class LearnerCredentialMailDto {
+  +name: string
+  +lastname: string
+  +email: string
+  +password : string
+  +tutorName : string
+  +tutorLastname : string
 }
 
-class Admin extends User {
-  +manageTutors(): void
-  +manageCollaborators(): void
-  +manageCourses(): void
-}
-
-class Course {
+class UserWithRoleDto {
   +id: number
+  +name: string
+  +lastname: string
+  +email: string
+  +status: string
+  +company_name: string
+  +role_id: number
+  +created_at: Date
+  +updated_at: Date
+  +isTutor?: boolean
+  +tutor_id : number
+}
+
+class CollaborationDto {
+  +id: number
+  +collaborator_id: number
+  +tutor_id: number
+  +created_at: Date
+  +status: string
+}
+
+class CourseDto {
+  +_id : ObjectId
   +title: string
   +description: string
   +status: string
-  +tutor: Tutor
-  +collaborators: List<Collaborator>
-  +modules: List<Module>
-  +addModule(): void
-  +updateModule(id : string):void
-  +removeModule(id : string): void
+  +modules: ModuleDto[]
+  +created_at: Date
+  +updated_at: Date
 }
 
-class Module {
+class ModuleDto {
+  +content_type: string
+  +content_value: string
+}
+
+class SendMessageDto {
+  +senderId: number
+  +receiverId: number
+  +content: string
+}
+
+class SendMailDto {
+  +to: string
+  +subject: string
+  +body: string
+}
+
+class PaginationDto {
+  +page: number
+  +limit: number
+}
+
+class PaginatedResponse<T> {
+  +data: T[]
+  +total: number
+  +page: number
+  +limit: number
+}
+
+' --- Entities ---
+
+class Collaboration {
   +id: number
-  +title: string
-  +content: ModuleContent
-  +course: Course
+  +collaborator_id: string
+  +tutor_id :string
+  +status: string
 }
-
-abstract class ModuleContent {
+class User {
   +id: number
-  +module: Module
+  +name: string
+  +lastName : string
+  +email: string
+  +password: string
+  +role_id: UserRole
+  +status: string
 }
 
-class WebLink extends ModuleContent {
-  +url: string
-}
-
-class TextContent extends ModuleContent {
-  +text: string
-}
-
-class PDFFile extends ModuleContent {
-  +filePath: string
-}
 
 class Message {
   +id: number
@@ -76,43 +195,47 @@ class Message {
   +content: string
   +timestamp: Date
   +status: string
-  +attachments: List<Attachment>
-  +sendMessage(): void
-  +replyToMessage(): void
 }
 
-class Attachment {
-  +id: number
-  +file: string
-  +message: Message
-}
-
-class Email {
-  +id: number
-  +sender: User
-  +receiver: User
-  +subject: string
-  +body: string
-  +timestamp: Date
+class Course {
+  +_id : ObjectId
+  +title: string
+  +description: string
+  +tutor_id : number
   +status: string
-  +attachments: List<Attachment>
-  +sendEmail(): void
+  +modules: Module[]
+  +created_at: Date
+  +updated_at: Date
 }
 
-User "1" -- "*" Course : enrolledIn
-Tutor "1" -- "*" Course : teaches
-Collaborator "1" -- "*" Course : enrolledIn
+class Module {
+  +_id : ObjectId
+  +content_type: string
+  +content_value: string
+}
+
+enum UserRole {
+  TUTOR = 1,
+  LEARNER = 2
+}
+
+' --- Relationships ---
+UserController --> UserService : uses
+CollaborationController --> CollaborationService : uses
+UserService --> CollaborationService : uses
+CourseController --> CourseService : uses
+MessageController --> MessageService : uses
+AuthController --> AuthService : uses
+
+UserService --> MailService : uses for user creation & course notifications
+CourseService --> MailService : uses for course notifications
+AuthService --> MailService : uses for registration notifications
+
+User "1" -- "1.*" Collaboration : collaboratesWith
+User "1" -- "*" Course : enrolledIn if role_id = 2
+Course "0..*" -- "1" Module
+User "1" -- "*" Course : teaches if role_id = 1
 User "1" -- "*" Message : sends
 User "1" -- "*" Message : receives
-User "1" -- "*" Email : sends
-User "1" -- "*" Email : receives
-Course "1" -- "*" Module : contains
-Message "1" -- "*" Attachment : has
-Email "1" -- "*" Attachment : has
-
-Module "1" -- "1" ModuleContent : contains
-ModuleContent <|-- WebLink
-ModuleContent <|-- TextContent
-ModuleContent <|-- PDFFile
 
 @enduml

@@ -1,42 +1,51 @@
 @startuml "Sequence onboarding"
 actor Tutor
-actor Collaborator
-participant "Tutor Controller" as TutorController
-participant "Auth Middleware" as AuthMiddleware
-participant "Tutor Service" as TutorService
-participant "Collaborator Service" as CollaboratorService
+actor Learner
+participant "User Controller" as UserController
+participant "Auth Guard" as AuthGuard
+participant "User Service" as UserService
+participant "Collaboration Service" as CollaborationService
 participant "Database" as Database
 participant "Email Service" as EmailService
-participant "Collaborator Controller" as CollaboratorController
 participant "Auth Service" as AuthService
 
-Tutor -> TutorController: Request to add collaborator
-TutorController -> AuthMiddleware: Validate JWT
+Tutor -> UserController: Request to add collaborator
+UserController -> AuthGuard: Validate JWT and permissions
 alt Session validated
-    TutorController -> CollaboratorService: Check if email is already used
-    CollaboratorService -> Database: Query for email
-    Database -> CollaboratorService: Email status
+    UserController -> UserService: Check if email is already used
+    UserService -> Database: Query for email
+    Database -> UserService: Email status
     alt Email already used
-        CollaboratorService -> TutorController: Email already used
-        TutorController -> CollaboratorService: Save with the specific info
+        UserService -> CollaborationService: Check if collaboration exists
+        CollaborationService -> Database: Verify collaboration for email and tutor_id
+        Database -> CollaborationService: Collaboration status
+        alt Collaboration exists
+            CollaborationService -> UserController: Notify email already in use
+            UserController -> Tutor: Email already used
+        else Collaboration does not exist
+            CollaborationService -> Database: Add new collaboration
+            Database -> CollaborationService: Collaboration saved
+            CollaborationService -> UserController: Collaboration added successfully
+        end
     else Email not used
-        TutorController -> CollaboratorService: Add collaborator with email
-        CollaboratorService -> Database: Save collaborator details
-        Database -> CollaboratorService: Collaborator saved
-        CollaboratorService -> EmailService: Send email with credentials
-        EmailService -> Collaborator: Email sent
+        UserController -> UserService: Add learner with email
+        UserService -> Database: Save learner details
+        Database -> UserService: Learner saved
+        UserService -> EmailService: Send email with temporary credentials
+        EmailService -> Learner: Email sent with temporary login details
     end
-    Collaborator -> CollaboratorController: First login with temporary credentials
-    CollaboratorController -> AuthService: Validate temporary credentials
-    AuthService -> CollaboratorController: Credentials validated
-    CollaboratorController -> CollaboratorService: Update collaborator details (password, name, surname)
-    CollaboratorService -> Database: Save updated collaborator details
-    Database -> CollaboratorService: Collaborator details updated
-    CollaboratorService -> CollaboratorController: Redirect to course page
-    CollaboratorController -> Collaborator: Redirect to course page
+
+    Learner -> UserController: First login with temporary credentials
+    UserController -> AuthService: Validate temporary credentials
+    AuthService -> UserController: Credentials validated
+    UserController -> UserService: Update learner details (password, name, surname)
+    UserService -> Database: Save updated learner details
+    Database -> UserService: Learner details updated
+    UserService -> UserController: Redirect to course page
+    UserController -> Learner: Redirect to course page
 else Session not validated
-    AuthMiddleware -> TutorController: Session not validated
-    TutorController -> Tutor: Notify session not validated
+    AuthGuard -> UserController: Session not validated
+    UserController -> Tutor: Notify session not validated
 end
 
 @enduml
