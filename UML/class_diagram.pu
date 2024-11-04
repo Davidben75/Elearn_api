@@ -24,7 +24,8 @@ class CourseController {
   +getCourseById(courseId: ObjectId): Course
   +getAllCourses(paginationDto : PaginationDto): Course[]
   +getAllCoursesByTutorId(paginationDto : PaginationDto): CourseDto[]
-  +markCourseAsCompleted(courseId : ObjectId, userId: number): void
+  +getProgress(userId: number, courseId: ObjectId): Progress
+  +updateProgress(progressDto: UpdateProgressDto): void
 }
 
 class MessageController {
@@ -63,7 +64,8 @@ class CourseService {
   +getCourseById(courseId: ObjectId): CourseDto
   +getAllCourses(): CourseDto[]
   +getAllCoursesByTutorId(tutorId: number): CourseDto[]
-  +markCourseAsCompleted(courseId: ObjectId, userId: number): void
+  +getProgress(userId: number, courseId: ObjectId): Progress
+  +updateProgress(progressDto: UpdateProgressDto): void
 }
 
 class MessageService {

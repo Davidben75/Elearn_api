@@ -7,7 +7,7 @@ entity User {
   +lastname: string
   +email: string
   +password: string
-  +status: string
+  +status: UserStatus
   +company_name: string
   +role_id: number <<FK>>
   +created_at: Date
@@ -22,7 +22,7 @@ entity Course <<NoSQL>> {
   +id: string ObjectId
   +title: string
   +description: string
-  +status: string
+  +status: CourseStatus
   +tutor_id: number <<FK>> // Référence à un utilisateur dans PostgreSQL
   +modules: List of Module
   +created_at: Date
@@ -41,7 +41,7 @@ entity Message {
   +receiver_id: number <<FK>>
   +content: string
   +timestamp: Date
-  +status: string
+  +status: MessageStatus
 }
 
 entity Notification {
@@ -49,7 +49,7 @@ entity Notification {
   +user_id: number <<FK>>
   +content: string
   +timestamp: Date
-  +status: string
+  +status: NotificationStatus
   +type: string
 }
 
@@ -58,8 +58,55 @@ entity Collaboration {
   +collaborator_id: number <<FK>>
   +tutor_id: number <<FK>>
   +created_at: Date
-  +status: string
+  +status: CollaborationStatus
 }
+
+entity Progress {
+  +id: number <<PK>>
+  +user_id: number <<FK>> // References the User table
+  +course_id: string ObjectId <<FK>> // References the Course in NoSQL
+  +module_id: string ObjectId <<FK>> // References the Module in NoSQL
+  +completion_status: CompletionStatus
+  +progress_percentage: float 
+  +last_accessed_at: Date 
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MessageStatus {
+  READ
+  UNREAD
+  DELETED
+}
+
+enum NotificationStatus {
+  SEEN
+  UNSEEN
+}
+
+enum CollaborationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CompletionStatus {
+  COMPLETED
+  IN_PROGRESS
+  NOT_STARTED
+}
+
+User ||--o{ Progress : "A user tracks progress in multiple courses"
+Course ||--o{ Progress : "A course has progress tracked by multiple users"
+Module ||--o{ Progress : "Progress is tracked per module"
 
 note right of Course
   modules: List of Module

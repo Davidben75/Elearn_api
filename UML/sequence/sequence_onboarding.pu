@@ -32,17 +32,14 @@ alt Session validated
         UserService -> Database: Save learner details
         Database -> UserService: Learner saved
         UserService -> EmailService: Send email with temporary credentials
-        EmailService -> Learner: Email sent with temporary login details
+        alt Email sent successfully
+            EmailService -> Learner: Email sent with temporary login details
+        else Email failed
+            EmailService -> UserService: Email sending failed
+            UserService -> UserController: Notify Tutor about email failure
+            UserController -> Tutor: Email sending failed
+        end
     end
-
-    Learner -> UserController: First login with temporary credentials
-    UserController -> AuthService: Validate temporary credentials
-    AuthService -> UserController: Credentials validated
-    UserController -> UserService: Update learner details (password, name, surname)
-    UserService -> Database: Save updated learner details
-    Database -> UserService: Learner details updated
-    UserService -> UserController: Redirect to course page
-    UserController -> Learner: Redirect to course page
 else Session not validated
     AuthGuard -> UserController: Session not validated
     UserController -> Tutor: Notify session not validated

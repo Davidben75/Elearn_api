@@ -6,43 +6,55 @@ actor Tutor
 actor Admin
 
 rectangle "LMS System" {
-    package "Course Management" {
-        usecase "Create / Update Course" as UC1
-        usecase "Delete Course" as UC2
-        usecase "Manage Courses" as UC9
+    package "User Management" {
+        usecase "Create Collaborator Account" as UC1
+        usecase "Manage Collaborators" as UC2
+        usecase "Update User Info" as UC3
     }
 
-    package "Collaborator Management" {
-        usecase "Add/Remove Collaborator" as UC3
+    package "Course Management" {
+        usecase "Create Course" as UC4
+        usecase "Update Course" as UC5
+        usecase "Delete Course" as UC6
+        usecase "Hide Course" as UC7
+        usecase "Manage Courses" as UC8
+        usecase "View Courses" as UC9
+        usecase "Enroll in Course" as UC10
+        usecase "Change Course Status" as UC11
     }
 
     package "Communication" {
-        usecase "Communicate with Collaborators" as UC4
-    }
-
-    package "Course Participation" {
-        usecase "Follow Courses" as UC6
+        usecase "Chat with user who share the same tutor" as UC12
     }
 
     package "Admin Management" {
-        usecase "Manage Tutors" as UC7
-        usecase "Manage Collaborators" as UC8
+        usecase "Manage Users" as UC13
+        usecase "Manage Courses" as UC14
+    }
+
+    package "Notification Management" {
+        usecase "Receive Notifications" as UC16
     }
 }
 
+Collaborator --> UC9
+Collaborator --> UC10
+Collaborator --> UC3
+Collaborator --> UC16
+
 Tutor --> UC1
 Tutor --> UC2
-Tutor --> UC3
 Tutor --> UC4
-Tutor --> UC9
+Tutor --> UC5
+Tutor --> UC6
+Tutor --> UC7
+Tutor --> UC8
+Tutor --> UC11
+Tutor --> UC12
 
-Collaborator --> UC6
-Collaborator --> UC4
 
-Admin --> UC7
-Admin --> UC8
-Admin --> UC9
-
+Admin --> UC13
+Admin --> UC14
 
 Tutor --|> Collaborator : includes
 Admin --|> Tutor :includes
