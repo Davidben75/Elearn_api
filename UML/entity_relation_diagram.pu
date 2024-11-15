@@ -23,7 +23,7 @@ entity Course <<NoSQL>> {
   +title: string
   +description: string
   +status: CourseStatus
-  +tutor_id: number <<FK>> // Référence à un utilisateur dans PostgreSQL
+  +tutor_id: number <<FK>> // Refer to a user on PostgreSQL
   +modules: List of Module
   +created_at: Date
   +updated_at: Date
@@ -110,21 +110,21 @@ Module ||--o{ Progress : "Progress is tracked per module"
 
 note right of Course
   modules: List of Module
-  Chaque Module contient :
+  Each Module has :
     - content_type: string
     - content_value: string
-  Choix d'une BDD Mongo car les cours seront évolutifs
+  Use Mongodb cause the Course can change in the future
 end note
 
 User ||--o{ Role : "1" has "many"
 User ||--o{ Message : "1" sends "many"
 User ||--o{ Message : "1" receives "many"
 User ||--o{ Notification : "1" notifies "many"
-User ||--o{ Course : "1 enseigne plusieurs cours" // Référence au tutor_id
+User ||--o{ Course : "1 teaches many courses" // Refer to tutor_id
 
-Course ||--o{ Module : "Un cours contient plusieurs modules" 
+Course ||--o{ Module : "1 course has many Module or any" 
 
-Collaboration ||--o{ User : "Un collaborateur a un tuteur"
-Collaboration }o--|| User : "Un tuteur a plusieurs collaborateurs"
+Collaboration ||--o{ User : "A collaborator has tutor"
+Collaboration }o--|| User : "A tutor has many collaborator"
 
 @enduml
