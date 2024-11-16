@@ -13,58 +13,112 @@ datasource db {
   url      = env("POSTGRESQL_DB_URI")
 }
 
+// Enums
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum MessageStatus {
+  READ
+  UNREAD
+  DELETED
+}
+
+enum NotificationStatus {
+  SEEN
+  UNSEEN
+}
+
+enum CollaborationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CompletionStatus {
+  COMPLETED
+  IN_PROGRESS
+  NOT_STARTED
+}
+
+// Tables
 model User {
-  id Int @id @default(autoincrement())
-  name String
-  lastname String
-  email String         @unique
-  password String
-  status String
-  company_name String?
-  role Role @relation(fields: [role_id], references: [id])
-  role_id Int
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt()  
-  sent_messages Message[] @relation("SentMessages")
-  received_messages Message[] @relation("ReceivedMessages")
-  notifications     Notification[]
-  collaborations_as_collaborator Collaboration[] @relation("CollaboratorRelation")
-  collaborations_as_tutor Collaboration[] @relation("TutorRelation")
+  id           Int              @id @default(autoincrement())
+  name         String
+  lastname     String
+  email        String           @unique
+  password     String
+  status       UserStatus       @default(ACTIVE)
+  company_name String
+  role_id      Int
+  role         Role             @relation(fields: [role_id], references: [id])
+  created_at   DateTime         @default(now())
+  progress     Progress[]
+  messagesSent Message[]        @relation("MessageSender")
+  messagesReceived Message[]    @relation("MessageReceiver")
+  notifications Notification[]
+  collaborationsAsCollaborator Collaboration[] @relation("Collaborator")
+  collaborationsAsTutor Collaboration[] @relation("Tutor")
+
+
+  @@map("users")
 }
 
 model Role {
   id    Int    @id @default(autoincrement())
   name  String
   users User[]
+
+  @@map("roles")
 }
 
 model Message {
-  id Int @id @default(autoincrement())
-  sender User @relation("SentMessages", fields: [sender_id], references: [id])
-  sender_id Int
-  receiver User @relation("ReceivedMessages", fields: [receiver_id], references: [id])
-  receiver_id Int
-  content String
-  timestamp DateTime @default(now())
-  status String
+  id           Int           @id @default(autoincrement())
+  sender_id    Int
+  receiver_id  Int
+  content      String
+  timestamp    DateTime       @default(now())
+  status       MessageStatus  @default(UNREAD)
+  sender       User           @relation("MessageSender", fields: [sender_id], references: [id])
+  receiver     User           @relation("MessageReceiver", fields: [receiver_id], references: [id])
+
+  @@map("messages")
 }
 
 model Notification {
-  id Int @id @default(autoincrement())
-  user User @relation(fields: [user_id], references: [id])
-  user_id Int
-  content String
-  timestamp DateTime @default(now())
-  status String
-  type String
+  id         Int                @id @default(autoincrement())
+  user_id    Int
+  content    String
+  timestamp  DateTime           @default(now())
+  status     NotificationStatus @default(UNSEEN)
+  type       String
+  user       User               @relation(fields: [user_id], references: [id])
+
+  @@map("notifications")
 }
 
 model Collaboration {
-  id Int @id @default(autoincrement())
-  collaborator User @relation("CollaboratorRelation", fields: [collaborator_id], references: [id])
+  id              Int                 @id @default(autoincrement())
   collaborator_id Int
-  tutor User @relation("TutorRelation", fields: [tutor_id], references: [id])
-  tutor_id Int
-  created_at DateTime @default(now())
-  status String
+  tutor_id        Int
+  created_at      DateTime            @default(now())
+  status          CollaborationStatus @default(ACTIVE)
+  collaborator    User                @relation("Collaborator", fields: [collaborator_id], references: [id])
+  tutor           User                @relation("Tutor", fields: [tutor_id], references: [id])
+
+  @@map("collaborations")
+}
+
+model Progress {
+  id                 Int              @id @default(autoincrement())
+  user_id            Int
+  course_id          String           // Optional: Foreign key reference to another system
+  module_id          String           // Optional: Foreign key reference to another system
+  completion_status  CompletionStatus
+  progress_percentage Float
+  last_accessed_at   DateTime
+  user               User             @relation(fields: [user_id], references: [id])
+
+  @@map("progress")
 }
