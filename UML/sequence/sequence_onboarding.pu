@@ -1,48 +1,55 @@
 @startuml "Sequence onboarding"
+
 actor Tutor
 actor Learner
 participant "User Controller" as UserController
 participant "Auth Guard" as AuthGuard
 participant "User Service" as UserService
-participant "Collaboration Service" as CollaborationService
 participant "Database" as Database
 participant "Email Service" as EmailService
 participant "Auth Service" as AuthService
 
 Tutor -> UserController: Request to add collaborator
 UserController -> AuthGuard: Validate JWT and permissions
+
 alt Session validated
+    AuthGuard --> UserController: Session and permissions validated
     UserController -> UserService: Check if email is already used
     UserService -> Database: Query for email
-    Database -> UserService: Email status
+    Database --> UserService: Email status
+
     alt Email already used
-        UserService -> CollaborationService: Check if collaboration exists
-        CollaborationService -> Database: Verify collaboration for email and tutor_id
-        Database -> CollaborationService: Collaboration status
+        UserService -> Database: Verify collaboration for email and tutor_id
+        Database --> UserService: Collaboration status
+
         alt Collaboration exists
-            CollaborationService -> UserController: Notify email already in use
-            UserController -> Tutor: Email already used
+            UserService --> UserController: Notify email already in use
+            UserController --> Tutor: Email already used
         else Collaboration does not exist
-            CollaborationService -> Database: Add new collaboration
-            Database -> CollaborationService: Collaboration saved
-            CollaborationService -> UserController: Collaboration added successfully
+            UserService -> Database: Add new collaboration
+            Database --> UserService: Collaboration saved
+            UserService --> UserController: Collaboration added successfully
+            UserController --> Tutor: Collaboration added
         end
     else Email not used
         UserController -> UserService: Add learner with email
         UserService -> Database: Save learner details
-        Database -> UserService: Learner saved
+        Database --> UserService: Learner saved
+
         UserService -> EmailService: Send email with temporary credentials
         alt Email sent successfully
-            EmailService -> Learner: Email sent with temporary login details
+            EmailService --> UserService: Email sent successfully
+            UserService --> UserController: Notify Tutor of successful onboarding
+            UserController --> Tutor: Learner added and email sent
         else Email failed
-            EmailService -> UserService: Email sending failed
-            UserService -> UserController: Notify Tutor about email failure
-            UserController -> Tutor: Email sending failed
+            EmailService --> UserService: Email sending failed
+            UserService --> UserController: Notify Tutor about email failure
+            UserController --> Tutor: Email sending failed
         end
     end
 else Session not validated
-    AuthGuard -> UserController: Session not validated
-    UserController -> Tutor: Notify session not validated
+    AuthGuard --> UserController: Session not validated
+    UserController --> Tutor: Notify session not validated
 end
 
 @enduml

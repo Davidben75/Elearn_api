@@ -1,0 +1,87 @@
+@startuml "Class DTO Diagram"
+!theme carbon-gray
+
+
+' --- Data Transfer Objects (DTOs) ---
+class RegisterDto {
+  +name: string
+  +email: string
+  +password: string
+  +lastName: string
+  +companyName: string
+}
+
+class LoginDto {
+  +email: string
+  +password: string
+}
+
+class LearnerCredentialMailDto {
+  +name: string
+  +lastname: string
+  +email: string
+  +password : string
+  +tutorName : string
+  +tutorLastname : string
+}
+
+class UserWithRoleDto {
+  +id: number
+  +name: string
+  +lastname: string
+  +email: string
+  +status: string
+  +company_name: string
+  +role_id: number
+  +created_at: Date
+  +updated_at: Date
+  +isTutor?: boolean
+  +tutor_id : number
+}
+
+class CollaborationDto {
+  +id: number
+  +collaborator_id: number
+  +tutor_id: number
+  +created_at: Date
+  +status: string
+}
+
+class CourseDto {
+  +_id : ObjectId
+  +title: string
+  +description: string
+  +status: string
+  +modules: ModuleDto[]
+  +created_at: Date
+  +updated_at: Date
+}
+
+class ModuleDto {
+  +content_type: string
+  +content_value: string
+}
+
+class SendMessageDto {
+  +senderId: number
+  +receiverId: number
+  +content: string
+}
+
+class SendMailDto {
+  +to: string
+  +subject: string
+  +body: string
+}
+
+class PaginationDto {
+  +page: number
+  +limit: number
+}
+
+class PaginatedResponse<T> {
+  +data: T[]
+  +total: number
+  +page: number
+  +limit: number
+}

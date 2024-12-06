@@ -1,0 +1,30 @@
+@startuml "Course activity"
+start
+:Tutor logs in and sends a course creation request;
+
+:JWT is validated;
+if (JWT valid?) then (yes)
+    :Check user role;
+    if (User is Tutor or Admin?) then (yes)
+        :Gather course details (PDF, video link, web page, text);
+        :Save course details to database;
+        if (Course saved successfully?) then (yes)
+            :Fetch collaborators associated with the tutor;
+         
+            :Send email notifications to collaborators;
+            if (Emails sent successfully?) then (yes)
+                :Notify Tutor about successful course creation;
+            else (no)
+                :Notify Tutor of email failure;
+            endif
+        else (no)
+            :Notify Tutor of course creation failure;
+        endif
+    else (no)
+        :Notify Tutor about insufficient permissions;
+    endif
+else (no)
+    :Notify Tutor of session validation failure;
+endif
+stop
+@enduml

@@ -1,4 +1,4 @@
-@startuml 'Course creation with centralized service logic and error handling'
+@startuml "Course creation"
 
 actor Tutor
 participant "Course Controller" as CourseController
@@ -6,45 +6,46 @@ participant "Auth Guard" as AuthGuard
 participant "Course Service" as CourseService
 participant "Database" as Database
 participant "Email Service" as EmailService
-participant "User Service" as UsersService
-participant "Collaboration Service" as CollaborationService
+participant "User Service" as UserService
 
 Tutor -> CourseController: Request to create course
 CourseController -> AuthGuard: Validate JWT and permissions
 
 alt Session validated
-    AuthGuard -> CourseController: Session and role validated
+    AuthGuard --> CourseController: Session and role validated
     CourseController -> CourseService: Create course with details (PDF, video link, web page link, text)
 
     CourseService -> Database: Save course details
     alt Course saved successfully
-        Database -> CourseService: Course saved
+        Database --> CourseService: Course saved
 
-        CourseService -> CollaborationService: Get list of collaborators for tutor
-        CollaborationService -> Database: Fetch collaborators based on tutor ID
-        Database -> CollaborationService: Collaborators list
-        CollaborationService -> CourseService: Return collaborators list
+        CourseService -> UserService: Get list of collaborators for tutor
+        UserService -> Database: Fetch collaborators based on tutor ID
+        Database --> UserService: Collaborators list
+        UserService --> CourseService: Return collaborators list
 
         CourseService -> Database: Assign collaborators to course
-        Database -> CourseService: Collaborators assigned
+        Database --> CourseService: Collaborators assigned
 
         CourseService -> EmailService: Send email to all collaborators
         alt Email sent successfully
-            EmailService -> CourseService: Email sent successfully
+            EmailService --> CourseService: Email sent successfully
         else Email failed
-            EmailService -> CourseService: Email send failed
-            CourseService -> CourseController: Notify Tutor about email failure
+            EmailService --> CourseService: Email sending failed
+            CourseService --> CourseController: Notify Tutor about email failure
         end
 
-        CourseService -> CourseController: Course created successfully
-        CourseController -> Tutor: Course created and collaborators notified
+        CourseService --> CourseController: Course created successfully
+        CourseController --> Tutor: Notify course created and collaborators notified
     else Course save failed
-        CourseService -> CourseController: Notify Tutor about course creation failure
+        Database --> CourseService: Error saving course
+        CourseService --> CourseController: Notify Tutor about course creation failure
+        CourseController --> Tutor: Course creation failed
     end
 
 else Session not validated
-    AuthGuard -> CourseController: Session not validated
-    CourseController -> Tutor: Notify session not validated
+    AuthGuard --> CourseController: Session not validated
+    CourseController --> Tutor: Notify session not validated
 end
 
 @enduml
