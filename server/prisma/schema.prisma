@@ -4,8 +4,12 @@
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+// 
+// ╰─ docker-compose exec app npx prisma migrate reset --force                                                                                                                                                                           ─╯
+
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -114,7 +118,6 @@ model Progress {
   id                 Int              @id @default(autoincrement())
   user_id            Int
   course_id          String           // Optional: Foreign key reference to another system
-  module_id          String           // Optional: Foreign key reference to another system
   completion_status  CompletionStatus
   progress_percentage Float
   last_accessed_at   DateTime
