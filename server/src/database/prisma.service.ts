@@ -13,4 +13,20 @@ export class PrismaService
   async onModuleDestroy() {
     await this.$disconnect();
   }
+  async findById(id: number) {
+    return await this.user.findUnique({
+      where: {
+        id: id,
+      },
+    });
+  }
+
+  async findUserActiveByID(id: number) {
+    return await this.user.findUnique({
+      where: {
+        id: id,
+        status: 'ACTIVE',
+      },
+    });
+  }
 }

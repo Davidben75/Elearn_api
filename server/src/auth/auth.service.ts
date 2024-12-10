@@ -1,15 +1,17 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { LoginDto, RegisterDto } from './dto';
+import { LoginDto, PayloadDto, RegisterDto } from './dto';
 import * as argon from 'argon2';
 import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { UserService } from '../user/user.service';
 @Injectable()
 export class AuthService {
   constructor(
     private prismaService: PrismaService,
+    private userService: UserService,
     private jwt: JwtService,
     private config: ConfigService,
   ) {}
@@ -17,19 +19,9 @@ export class AuthService {
   async register(dto: RegisterDto) {
     try {
       const hash = await argon.hash(dto.password);
-      const user = await this.prismaService.user.create({
-        data: {
-          name: dto.name,
-          lastname: dto.lastName,
-          email: dto.email,
-          password: hash,
-          company_name: dto.companyName,
-          role_id: 1,
-          status: 'active',
-        },
-      });
+      dto.password = hash;
+      const user = await this.userService.createTutor(dto);
       delete user.password;
-
       return user;
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
@@ -43,11 +35,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     try {
-      const user = await this.prismaService.user.findUnique({
-        where: {
-          email: dto.email,
-        },
-      });
+      const user = await this.userService.findUserByMail(dto.email);
 
       if (!user) {
         throw new ForbiddenException('Credentials incorrect');
@@ -65,11 +53,12 @@ export class AuthService {
   }
 
   async signToken(user: User): Promise<{ access_token: string }> {
-    const payload = {
+    const payload: PayloadDto = {
       sub: user.id,
       email: user.email,
       roleId: user.role_id,
       status: user.status,
+      companyName: user.company_name,
     };
     const token = await this.jwt.signAsync(payload, {
       expiresIn: '1h',
