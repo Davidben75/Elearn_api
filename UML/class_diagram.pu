@@ -42,9 +42,11 @@ class AuthController {
 ' --- Services ---
 class UserService {
   +addNewLearner(learnerDto: RegisterLearnerDto, tutorId: number): User
+  +addManyLearner(learnerDto: RegisterLearnerDto[], tutorId: number): User[]
+  +addNewTutor(tutorDto: RegisterLearnerDto): User
   +updateUser(userId: number, userDto?: UserWithRoleDto): void
   +deleteUser(userId: number): void
-  +getUser(userId : number): User
+  +getUserById(userId : number): User
   +isValidUser(user : User) : boolean 
   +getAllUserByTutorId(tutorId: number): User[]
   +getAllUsers(): User[]

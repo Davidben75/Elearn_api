@@ -1,62 +1,84 @@
 @startuml 'usecase diagram'
 left to right direction
 
-actor Collaborator
-actor Tutor
-actor Admin
+skinparam actor {
+    BackgroundColor LightBlue
+    BorderColor DarkBlue
+}
+
+skinparam usecase {
+    BackgroundColor LightYellow
+    BorderColor DarkGoldenRod
+}
+
+skinparam rectangle {
+    BackgroundColor LightGray
+    BorderColor DarkGray
+}
+
+skinparam arrow {
+    Color Black
+    Thickness 2
+}
+
+actor Learner as L
+actor Tutor as T
+actor Admin as A
 
 rectangle "LMS System" {
+    usecase "Login" as UC0
+
     package "User Management" {
-        usecase "Create Collaborator Account" as UC1
-        usecase "Manage Collaborators" as UC2
-        usecase "Update User Info" as UC3
+        usecase "Manage Users" as UC1
+        usecase "Update User Info" as UC2
     }
 
     package "Course Management" {
-        usecase "Create Course" as UC4
-        usecase "Update Course" as UC5
-        usecase "Delete Course" as UC6
-        usecase "Hide Course" as UC7
-        usecase "Manage Courses" as UC8
-        usecase "View Courses" as UC9
-        usecase "Enroll in Course" as UC10
-        usecase "Change Course Status" as UC11
+        usecase "Manage Courses" as UC3
+        usecase "View Courses" as UC4
     }
 
     package "Communication" {
-        usecase "Chat with user who share the same tutor" as UC12
-    }
-
-    package "Admin Management" {
-        usecase "Manage Users" as UC13
-        usecase "Manage Courses" as UC14
+        usecase "Chat with users" as UC5
     }
 
     package "Notification Management" {
-        usecase "Receive Notifications" as UC16
+        usecase "Receive Notifications" as UC6
     }
 }
 
-Collaborator --> UC9
-Collaborator --> UC10
-Collaborator --> UC3
-Collaborator --> UC16
+' Positionnement des acteurs et héritage
+L -up-> UC0 : <<uses>>
+T -up-> UC0 : <<uses>>
+A -up-> UC0 : <<uses>>
 
-Tutor --> UC1
-Tutor --> UC2
-Tutor --> UC4
-Tutor --> UC5
-Tutor --> UC6
-Tutor --> UC7
-Tutor --> UC8
-Tutor --> UC11
-Tutor --> UC12
+T -up-|> L : extends
+A -up-|> T : extends
 
+UC0 <.. UC1 : <<include>>
+UC0 <.. UC2 : <<include>>
+UC0 <.. UC3 : <<include>>
+UC0 <.. UC4 : <<include>>
+UC0 <.. UC5 : <<include>>
+UC0 <.. UC6 : <<include>>
 
-Admin --> UC13
-Admin --> UC14
+UC1 <.. (Create Learner Account) : <<extend>>
+UC1 <.. (Manage Learners) : <<extend>>
 
-Tutor --|> Collaborator : includes
-Admin --|> Tutor :includes
+UC3 <.. (Create Course) : <<extend>>
+UC3 <.. (Update Course) : <<extend>>
+UC3 <.. (Delete Course) : <<extend>>
+UC3 <.. (Hide Course) : <<extend>>
+
+L --> UC2 : <<uses>>
+L --> UC4 : <<uses>>
+L --> UC6 : <<uses>>
+
+T --> UC1 : <<uses>>
+T --> UC3 : <<uses>>
+T --> UC5 : <<uses>>
+
+A --> UC1 : <<uses>>
+A --> UC3 : <<uses>>
 
 @enduml
