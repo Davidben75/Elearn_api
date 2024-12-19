@@ -69,15 +69,17 @@ services:
     # PRISMA STUDIO
     prisma-studio:
         container_name: lms_prisma_studio
-        image: node:18-alpine
+        build:
+            context: ./server
+            dockerfile: Dockerfile
         working_dir: /usr/src/app
         ports:
             - "5555:5555"
-        volumes:
-            - ./server:/usr/src/app
+        command: ["npx", "prisma", "studio"]
         depends_on:
             - postgres-dev-db
-        command: ["npx", "prisma", "studio"]
+        volumes:
+            - ./server:/usr/src/app
         networks:
             - lms_network
 
