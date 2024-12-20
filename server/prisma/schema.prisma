@@ -117,9 +117,9 @@ model Collaboration {
 model Progress {
   id                 Int              @id @default(autoincrement())
   user_id            Int
-  course_id          String           // Optional: Foreign key reference to another system
+  course_id          String           // Mandatory: Foreign key reference to another system
+  module_id          String           // Mandatory: Foreign key reference to another system
   completion_status  CompletionStatus
-  progress_percentage Float
   last_accessed_at   DateTime
   user               User             @relation(fields: [user_id], references: [id])
 
