@@ -24,6 +24,11 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum CourseStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum MessageStatus {
   READ
   UNREAD
@@ -64,7 +69,7 @@ model User {
   notifications Notification[]
   collaborationsAsCollaborator Collaboration[] @relation("Collaborator")
   collaborationsAsTutor Collaboration[] @relation("Tutor")
-
+  coursesAsTutor Course[]       @relation("CourseTutor")
 
   @@map("users")
 }
@@ -77,15 +82,43 @@ model Role {
   @@map("roles")
 }
 
+model Course {
+  id          Int           @id @default(autoincrement())
+  title       String
+  description String
+  status      CourseStatus  @default(ACTIVE)
+  tutor_id    Int
+  created_at  DateTime      @default(now())
+  updated_at  DateTime      @updatedAt
+  tutor       User          @relation("CourseTutor", fields: [tutor_id], references: [id])
+  modules     Module[]
+  progress    Progress[]
+
+  @@map("courses")
+}
+
+model Module {
+  id           Int     @id @default(autoincrement())
+  course_id    Int
+  title        String
+  content_type String
+  content_id   Int
+  order        Int
+  course       Course  @relation(fields: [course_id], references: [id])
+  progress     Progress[]
+
+  @@map("modules")
+}
+
 model Message {
   id           Int           @id @default(autoincrement())
   sender_id    Int
   receiver_id  Int
   content      String
-  timestamp    DateTime       @default(now())
-  status       MessageStatus  @default(UNREAD)
-  sender       User           @relation("MessageSender", fields: [sender_id], references: [id])
-  receiver     User           @relation("MessageReceiver", fields: [receiver_id], references: [id])
+  timestamp    DateTime      @default(now())
+  status       MessageStatus @default(UNREAD)
+  sender       User          @relation("MessageSender", fields: [sender_id], references: [id])
+  receiver     User          @relation("MessageReceiver", fields: [receiver_id], references: [id])
 
   @@map("messages")
 }
@@ -117,11 +150,13 @@ model Collaboration {
 model Progress {
   id                 Int              @id @default(autoincrement())
   user_id            Int
-  course_id          String           // Mandatory: Foreign key reference to another system
-  module_id          String           // Mandatory: Foreign key reference to another system
+  course_id          Int
+  module_id          Int
   completion_status  CompletionStatus
   last_accessed_at   DateTime
   user               User             @relation(fields: [user_id], references: [id])
+  course             Course           @relation(fields: [course_id], references: [id])
+  module             Module           @relation(fields: [module_id], references: [id])
 
   @@map("progress")
 }
