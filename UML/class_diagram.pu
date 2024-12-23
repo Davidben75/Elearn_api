@@ -1,4 +1,4 @@
-@startuml "Class Diagram"
+@startuml "Architectural Layer Diagram"
 !theme carbon-gray
 
 ' --- Controllers ---
@@ -12,7 +12,6 @@ class UserController {
 }
 
 class CollaborationController {
-  +addCollaboration(learner: UserWithRoleDto, tutorId: number): void
   +updateCollaboration(collab :CollaborationDto): void
   +deleteCollaboration(collabId: number): void
 }
@@ -87,6 +86,7 @@ class MailService {
   +sendMailNewCourse(courseDto: CourseDto, users: User[]): void
   +sendMailCourseUpdate(courseDto: CourseDto, users: User[]): void
   +sendMailWelcomeWithCredentials(leanerCredentialsMail: LearnerCredentialMailDto): void
+  +sendWelcomeMail(dto : RegisterDto) : void
 }
 
 ' --- Entities ---

@@ -1,74 +1,92 @@
-@startuml "entity relation SQL + NoSQL"
+@startuml "Optimized PostgreSQL Schema with Content Type Association"
 !theme carbon-gray
 
 entity User {
-  +id: number <<PK>>
-  +name: string
-  +lastname: string
-  +email: string
-  +password: string
+  +id: SERIAL <<PK>>
+  +name: VARCHAR(100)
+  +lastname: VARCHAR(100)
+  +email: VARCHAR(255) UNIQUE
+  +password: VARCHAR(255)
   +status: UserStatus
-  +company_name: string
-  +role_id: number <<FK>>
-  +created_at: Date
+  +company_name: VARCHAR(255)
+  +role_id: INTEGER <<FK>>
+  +created_at: TIMESTAMP
 }
 
 entity Role {
-  +id: number <<PK>>
-  +name: string
+  +id: SERIAL <<PK>>
+  +name: VARCHAR(50) UNIQUE
 }
 
-entity Course <<NoSQL>> {
-  +id: string ObjectId
-  +title: string
-  +description: string
+entity Course {
+  +id: SERIAL <<PK>>
+  +title: VARCHAR(255)
+  +description: TEXT
   +status: CourseStatus
-  +tutor_id: number <<FK>> // Refer to a user on PostgreSQL
-  +modules: List of Module
-  +created_at: Date
-  +updated_at: Date
+  +tutor_id: INTEGER <<FK>>
+  +created_at: TIMESTAMP
+  +updated_at: TIMESTAMP
 }
 
-entity Module <<NoSQL>> {
-  +id: ObjectId
-  +content_type: string
-  +content_value: string
+entity Module {
+  +id: SERIAL <<PK>>
+  +course_id: INTEGER <<FK>>
+  +title: VARCHAR(255)
+  +content_type: VARCHAR(50)
+  +content_id: INTEGER
+  +order: INTEGER
+}
+
+entity VideoContent {
+  +id: SERIAL <<PK>>
+  +url: VARCHAR(255)
+  +duration: INTEGER
+}
+
+entity PDFContent {
+  +id: SERIAL <<PK>>
+  +file_path: VARCHAR(255)
+  +page_count: INTEGER
+}
+
+entity TextContent {
+  +id: SERIAL <<PK>>
+  +content: TEXT
 }
 
 entity Message {
-  +id: number <<PK>>
-  +sender_id: number <<FK>>
-  +receiver_id: number <<FK>>
-  +content: string
-  +timestamp: Date
+  +id: SERIAL <<PK>>
+  +sender_id: INTEGER <<FK>>
+  +receiver_id: INTEGER <<FK>>
+  +content: TEXT
+  +timestamp: TIMESTAMP
   +status: MessageStatus
 }
 
 entity Notification {
-  +id: number <<PK>>
-  +user_id: number <<FK>>
-  +content: string
-  +timestamp: Date
+  +id: SERIAL <<PK>>
+  +user_id: INTEGER <<FK>>
+  +content: TEXT
+  +timestamp: TIMESTAMP
   +status: NotificationStatus
-  +type: string
+  +type: VARCHAR(50)
 }
 
 entity Collaboration {
-  +id: number <<PK>>
-  +collaborator_id: number <<FK>>
-  +tutor_id: number <<FK>>
-  +created_at: Date
+  +id: SERIAL <<PK>>
+  +learner_id: INTEGER <<FK>>
+  +tutor_id: INTEGER <<FK>>
+  +created_at: TIMESTAMP
   +status: CollaborationStatus
 }
 
 entity Progress {
-  +id: number <<PK>>
-  +user_id: number <<FK>> // References the User table
-  +course_id: string ObjectId <<FK>> // References the Course in NoSQL
-  +module_id: string ObjectId <<FK>> // References the Module in NoSQL
+  +id: SERIAL <<PK>>
+  +user_id: INTEGER <<FK>>
+  +course_id: INTEGER <<FK>>
+  +module_id: INTEGER <<FK>>
   +completion_status: CompletionStatus
-  +progress_percentage: float 
-  +last_accessed_at: Date 
+  +last_accessed_at: TIMESTAMP 
 }
 
 enum UserStatus {
@@ -108,23 +126,26 @@ User ||--o{ Progress : "A user tracks progress in multiple courses"
 Course ||--o{ Progress : "A course has progress tracked by multiple users"
 Module ||--o{ Progress : "Progress is tracked per module"
 
-note right of Course
-  modules: List of Module
-  Each Module has :
-    - content_type: string
-    - content_value: string
-  Use Mongodb cause the Course can change in the future
-end note
-
-User ||--o{ Role : "1" has "many"
+User ||--|| Role : "1" has "many"
 User ||--o{ Message : "1" sends "many"
 User ||--o{ Message : "1" receives "many"
 User ||--o{ Notification : "1" notifies "many"
-User ||--o{ Course : "1 teaches many courses" // Refer to tutor_id
+User ||--o{ Course : "1 teaches many courses"
 
-Course ||--o{ Module : "1 course has many Module or any" 
+Course ||--o{ Module : "1 course has many Modules" 
 
-Collaboration ||--o{ User : "A collaborator has tutor"
-Collaboration }o--|| User : "A tutor has many collaborator"
+Collaboration }o--|| User : "A learner has one tutor"
+Collaboration ||--o{ User : "A tutor has many learners"
+
+Module ||--o{ VideoContent : "Has"
+Module ||--o{ PDFContent : "Has"
+Module ||--o{ TextContent : "Has"
+
+note right of Module
+  content_type determines which content table to use:
+  - "video" for VideoContent
+  - "pdf" for PDFContent
+  - "text" for TextContent
+end note
 
 @enduml
