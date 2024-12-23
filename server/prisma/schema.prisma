@@ -51,63 +51,78 @@ enum CompletionStatus {
   NOT_STARTED
 }
 
-// Tables
+// Models
 model User {
-  id           Int              @id @default(autoincrement())
-  name         String
-  lastname     String
-  email        String           @unique
-  password     String
-  status       UserStatus       @default(ACTIVE)
-  company_name String
-  role_id      Int
-  role         Role             @relation(fields: [role_id], references: [id])
-  created_at   DateTime         @default(now())
-  progress     Progress[]
-  messagesSent Message[]        @relation("MessageSender")
+  id              Int           @id @default(autoincrement())
+  name            String        @db.VarChar(100)
+  lastname        String        @db.VarChar(100)
+  email           String        @unique @db.VarChar(255)
+  password        String        @db.VarChar(255)
+  status          UserStatus
+  company_name    String        @db.VarChar(255)
+  role_id         Int
+  created_at      DateTime      @default(now())
+  role            Role          @relation(fields: [role_id], references: [id])
+  progress        Progress[]
+  messagesSent    Message[]     @relation("MessageSender")
   messagesReceived Message[]    @relation("MessageReceiver")
-  notifications Notification[]
-  collaborationsAsCollaborator Collaboration[] @relation("Collaborator")
-  collaborationsAsTutor Collaboration[] @relation("Tutor")
-  coursesAsTutor Course[]       @relation("CourseTutor")
-
-  @@map("users")
+  notifications   Notification[]
+  coursesAsTutor  Course[]
+  collaborationsAsLearner Collaboration[] @relation("LearnerCollaboration")
+  collaborationsAsTutor Collaboration[]   @relation("TutorCollaboration")
 }
 
 model Role {
   id    Int    @id @default(autoincrement())
-  name  String
+  name  String @unique @db.VarChar(50)
   users User[]
-
-  @@map("roles")
 }
 
 model Course {
   id          Int           @id @default(autoincrement())
-  title       String
+  title       String        @db.VarChar(255)
   description String
-  status      CourseStatus  @default(ACTIVE)
+  status      CourseStatus
   tutor_id    Int
   created_at  DateTime      @default(now())
   updated_at  DateTime      @updatedAt
-  tutor       User          @relation("CourseTutor", fields: [tutor_id], references: [id])
+  tutor       User          @relation(fields: [tutor_id], references: [id])
   modules     Module[]
   progress    Progress[]
-
-  @@map("courses")
 }
 
 model Module {
   id           Int     @id @default(autoincrement())
   course_id    Int
-  title        String
-  content_type String
+  title        String  @db.VarChar(255)
+  content_type String  @db.VarChar(50)
   content_id   Int
   order        Int
   course       Course  @relation(fields: [course_id], references: [id])
   progress     Progress[]
+  videoContent VideoContent?
+  pdfContent   PDFContent?
+  textContent  TextContent?
+}
 
-  @@map("modules")
+model VideoContent {
+  id       Int    @id @default(autoincrement())
+  url      String @db.VarChar(255)
+  duration Int
+  module   Module @relation(fields: [id], references: [id])
+}
+
+model PDFContent {
+  id         Int    @id @default(autoincrement())
+  file_path  String @db.VarChar(255)
+  page_count Int
+  module     Module @relation(fields: [id], references: [id])
+}
+
+model TextContent {
+  id      Int    @id @default(autoincrement())
+  content String
+  module  Module @relation(fields: [id], references: [id])
 }
 
 model Message {
@@ -116,11 +131,9 @@ model Message {
   receiver_id  Int
   content      String
   timestamp    DateTime      @default(now())
-  status       MessageStatus @default(UNREAD)
+  status       MessageStatus
   sender       User          @relation("MessageSender", fields: [sender_id], references: [id])
   receiver     User          @relation("MessageReceiver", fields: [receiver_id], references: [id])
-
-  @@map("messages")
 }
 
 model Notification {
@@ -128,23 +141,19 @@ model Notification {
   user_id    Int
   content    String
   timestamp  DateTime           @default(now())
-  status     NotificationStatus @default(UNSEEN)
-  type       String
+  status     NotificationStatus
+  type       String             @db.VarChar(50)
   user       User               @relation(fields: [user_id], references: [id])
-
-  @@map("notifications")
 }
 
 model Collaboration {
-  id              Int                 @id @default(autoincrement())
-  collaborator_id Int
-  tutor_id        Int
-  created_at      DateTime            @default(now())
-  status          CollaborationStatus @default(ACTIVE)
-  collaborator    User                @relation("Collaborator", fields: [collaborator_id], references: [id])
-  tutor           User                @relation("Tutor", fields: [tutor_id], references: [id])
-
-  @@map("collaborations")
+  id           Int                 @id @default(autoincrement())
+  learner_id   Int
+  tutor_id     Int
+  created_at   DateTime            @default(now())
+  status       CollaborationStatus
+  learner      User                @relation("LearnerCollaboration", fields: [learner_id], references: [id])
+  tutor        User                @relation("TutorCollaboration", fields: [tutor_id], references: [id])
 }
 
 model Progress {
@@ -157,6 +166,4 @@ model Progress {
   user               User             @relation(fields: [user_id], references: [id])
   course             Course           @relation(fields: [course_id], references: [id])
   module             Module           @relation(fields: [module_id], references: [id])
-
-  @@map("progress")
 }
