@@ -16,6 +16,13 @@ export class RegisterDto {
 
   @IsNotEmpty()
   @IsString()
+  // @IsStrongPassword({
+  //   minLength: 8,
+  //   minLowercase: 1,
+  //   minUppercase: 1,
+  //   minNumbers: 1,
+  //   minSymbols: 1,
+  // })
   @MinLength(8, { message: 'Password must be at least 8 characters' })
   password: string;
 

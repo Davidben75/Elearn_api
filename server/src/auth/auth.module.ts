@@ -4,11 +4,19 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategy';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
+import { MailService } from '../mail/mail.service';
+import { MailModule } from 'src/mail/mail.module';
 
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [JwtModule.register({}), MailModule],
   controllers: [AuthController],
-  providers: [AuthService, PrismaService, JwtStrategy, UserService],
+  providers: [
+    AuthService,
+    PrismaService,
+    JwtStrategy,
+    UserService,
+    MailService,
+  ],
 })
 export class AuthModule {}

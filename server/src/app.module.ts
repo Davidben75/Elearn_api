@@ -1,16 +1,18 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UserController } from './user/user.controller';
 import { UserModule } from './user/user.module';
+import { MailModule } from './mail/mail.module';
+import { PrismaModule } from './database/prisma.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    DatabaseModule,
+    PrismaModule,
     AuthModule,
     UserModule,
+    MailModule,
   ],
   controllers: [UserController],
 })

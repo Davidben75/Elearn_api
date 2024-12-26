@@ -1,12 +1,13 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { LoginDto, PayloadDto, RegisterDto } from './dto';
-import * as argon from 'argon2';
 import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from '../user/user.service';
+import { MailService } from '../mail/mail.service';
+import * as argon from 'argon2';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -14,23 +15,17 @@ export class AuthService {
     private userService: UserService,
     private jwt: JwtService,
     private config: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async register(dto: RegisterDto) {
+    const newTutor = await this.userService.createTutor(dto);
     try {
-      const hash = await argon.hash(dto.password);
-      dto.password = hash;
-      const user = await this.userService.createTutor(dto);
-      delete user.password;
-      return user;
+      await this.mailService.sendUserConfirmation(dto);
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ForbiddenException('Email already in use');
-        }
-      }
-      throw error;
+      console.error('Failed to send confirmation email:', error);
     }
+    return newTutor;
   }
 
   async login(dto: LoginDto) {

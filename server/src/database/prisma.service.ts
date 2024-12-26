@@ -1,4 +1,9 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -22,11 +27,14 @@ export class PrismaService
   }
 
   async findUserActiveByID(id: number) {
-    return await this.user.findUnique({
+    const user = await this.user.findUnique({
       where: {
         id: id,
-        status: 'ACTIVE',
       },
     });
+    if (user.status === 'SUSPENDED') {
+      throw new ForbiddenException('Your account has been suspended');
+    }
+    return user;
   }
 }
