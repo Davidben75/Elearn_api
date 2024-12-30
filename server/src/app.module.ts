@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
-import { UserController } from './user/user.controller';
 import { UserModule } from './user/user.module';
 import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './database/prisma.module';
+import { CourseModule } from './course/course.module';
 
 @Module({
   imports: [
@@ -13,7 +13,7 @@ import { PrismaModule } from './database/prisma.module';
     AuthModule,
     UserModule,
     MailModule,
+    CourseModule,
   ],
-  controllers: [UserController],
 })
 export class AppModule {}

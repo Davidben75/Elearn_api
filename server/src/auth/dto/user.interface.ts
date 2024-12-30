@@ -3,9 +3,8 @@ export interface UserWithRole {
   name: string;
   lastname: string;
   email: string;
+  role: string;
   status: string;
   companyName?: string;
   createdAt: Date;
-  isTutor: boolean; // Add is Tutor property
-  isAdmin: boolean;
 }
