@@ -10,15 +10,16 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard, RoleGuard } from '../auth/guard';
-import { StatusActiveGuard } from '../auth/guard/status.guard';
+import { JwtAuthGuard, RoleGuard } from '../common/guard';
+import { StatusActiveGuard } from '../common/guard/status.guard';
 import { UserService } from './user.service';
 import { LearnerRegisterDto, UpdatePasswordDto } from './dto';
-import { successResponse } from '../common/utils/';
-import { Roles } from 'src/common/utils';
-import { UserWithRole } from 'src/auth/dto';
+import { successResponse } from '../utils';
+import { UserWithRole } from '../auth/dto';
+import { Roles } from '../common/decorators/roles.decorator';
+import { User } from '../common/decorators/user.decorator';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RoleGuard, StatusActiveGuard)
 @Controller('user')
 export class UserController {
   constructor(private userService: UserService) {}
@@ -26,8 +27,9 @@ export class UserController {
   // -------------
   // TUTOR ACTION
   // -------------
+
+  // Add new learner only for tutor
   @Roles('tutor')
-  @UseGuards(RoleGuard, StatusActiveGuard)
   @Post('tutor/add-learner')
   @HttpCode(201)
   async addNewLearner(
@@ -52,12 +54,12 @@ export class UserController {
   // -------------
   // USER PUBLIC ACTIONS
   // -------------
+
+  // Get user Info
   @Get('me')
-  @UseGuards(StatusActiveGuard)
   @HttpCode(200)
-  async getMe(@Req() req) {
+  async getMe(@User() user: UserWithRole) {
     try {
-      const user = req.user;
       if (!user) {
         throw new UnauthorizedException('User not authenticated');
       }
@@ -67,6 +69,7 @@ export class UserController {
     }
   }
 
+  // Update password
   @Put('update-password')
   @HttpCode(200)
   async updatePassword(@Body() dto: UpdatePasswordDto, @Req() req) {
