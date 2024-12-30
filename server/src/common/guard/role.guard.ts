@@ -22,16 +22,9 @@ export class RoleGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    const isAuthorized = requiredRoles.some((role) => {
-      switch (role) {
-        case 'tutor':
-          return user.isTutor;
-        case 'admin':
-          return user.isAdmin;
-        default:
-          return false;
-      }
-    });
+    const isAuthorized = requiredRoles.some(
+      (role) => user.role.toUpperCase() === role.toUpperCase(),
+    );
 
     if (!isAuthorized) {
       throw new ForbiddenException(

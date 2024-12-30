@@ -32,10 +32,21 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       email: user.email,
       status: user.status,
       companyName: user.company_name,
-      isTutor: user.role_id === 2,
-      isAdmin: user.role_id === 1,
+      role: this.getRolename(user.role_id),
       createdAt: user.created_at,
     };
     return userWithRole;
   }
+
+  private getRolename(roleId: number): string {
+    switch (roleId) {
+      case 1:
+        return 'ADMIN';
+      case 2:
+        return 'TUTOR';
+      default:
+        return 'LEARNER';
+    }
+  }
 }
+//  Create a decorator that check if the isTutor if not go find the collaborator table and check if the collaborator is active and retriev the tutorId
