@@ -5,6 +5,7 @@ import { UserModule } from './user/user.module';
 import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './database/prisma.module';
 import { CourseModule } from './course/course.module';
+import { CollaborationModule } from './collaboration/collaboration.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { CourseModule } from './course/course.module';
     UserModule,
     MailModule,
     CourseModule,
+    CollaborationModule,
   ],
 })
 export class AppModule {}
