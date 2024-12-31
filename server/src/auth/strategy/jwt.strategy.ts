@@ -3,7 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, ExtractJwt } from 'passport-jwt';
 import { PrismaService } from '../../database/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { PayloadDto, UserWithRole } from '../dto';
+import { PayloadDto } from '../dto';
+import { IUserWithRole } from '../../common/interfaces';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -18,14 +19,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: PayloadDto): Promise<UserWithRole | null> {
+  async validate(payload: PayloadDto): Promise<IUserWithRole | null> {
     const user = await this.prismaService.findUserActiveByID(payload.sub);
 
     if (!user) {
       return null;
     }
 
-    const userWithRole: UserWithRole = {
+    const UserWithRole: IUserWithRole = {
       id: user.id,
       name: user.name,
       lastname: user.lastname,
@@ -35,7 +36,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       role: this.getRolename(user.role_id),
       createdAt: user.created_at,
     };
-    return userWithRole;
+    return UserWithRole;
   }
 
   private getRolename(roleId: number): string {

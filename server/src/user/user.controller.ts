@@ -15,7 +15,7 @@ import { StatusActiveGuard } from '../common/guard/status.guard';
 import { UserService } from './user.service';
 import { LearnerRegisterDto, UpdatePasswordDto } from './dto';
 import { successResponse } from '../utils';
-import { UserWithRole } from '../auth/dto';
+import { IUserWithRole } from '../common/interfaces';
 import { Roles } from '../common/decorators/roles.decorator';
 import { User } from '../common/decorators/user.decorator';
 
@@ -58,7 +58,7 @@ export class UserController {
   // Get user Info
   @Get('me')
   @HttpCode(200)
-  async getMe(@User() user: UserWithRole) {
+  async getMe(@User() user: IUserWithRole) {
     try {
       if (!user) {
         throw new UnauthorizedException('User not authenticated');
@@ -73,7 +73,7 @@ export class UserController {
   @Put('update-password')
   @HttpCode(200)
   async updatePassword(@Body() dto: UpdatePasswordDto, @Req() req) {
-    const user = req.user as UserWithRole;
+    const user = req.user as IUserWithRole;
     console.log(user);
     try {
       const updatedUser = await this.userService.updatePassword(

@@ -1,4 +1,4 @@
-export interface UserWithRole {
+export interface IUserWithRole {
   id: number;
   name: string;
   lastname: string;

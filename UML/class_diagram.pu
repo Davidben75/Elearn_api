@@ -4,7 +4,7 @@
 ' --- Controllers ---
 class UserController {
   +addNewLearner(learnerDto: RegisterLearnerDto, tutorId: number): User
-  +updateUser(userDto?: UserWithRoleDto): void
+  +updateUser(userDto?: IUserWithRoleDto): void
   +deleteUser(userId: number): void
   +getUser(): User
   +getAllUserByTutorId(tutorId : number): User[]
@@ -43,7 +43,7 @@ class UserService {
   +addNewLearner(learnerDto: RegisterLearnerDto, tutorId: number): User
   +addManyLearner(learnerDto: RegisterLearnerDto[], tutorId: number): User[]
   +addNewTutor(tutorDto: RegisterLearnerDto): User
-  +updateUser(userId: number, userDto?: UserWithRoleDto): void
+  +updateUser(userId: number, userDto?: IUserWithRoleDto): void
   +deleteUser(userId: number): void
   +getUserById(userId : number): User
   +isValidUser(user : User) : boolean 

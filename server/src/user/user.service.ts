@@ -5,18 +5,21 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import * as argon from 'argon2';
-import { RegisterDto, UserWithRole } from '../auth/dto';
+import { RegisterDto } from '../auth/dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { generate } from 'generate-password-ts';
 import { LearnerRegisterDto, UpdatePasswordDto } from './dto';
 import { MailService } from '../mail/mail.service';
-import { SendLearnerCredentialsDto } from 'src/mail/dto/send-learner-credentials.interface';
+import { SendLearnerCredentialsDto } from '../mail/dto/send-learner-credentials.interface';
+import { IUserWithRole } from '../common/interfaces';
+import { CollaborationService } from '../collaboration/collaboration.service';
 
 @Injectable()
 export class UserService {
   constructor(
     private prismaService: PrismaService,
     private mailService: MailService,
+    private collaborationService: CollaborationService,
   ) {}
 
   // Create a new user with role Tutor
@@ -49,7 +52,7 @@ export class UserService {
   }
 
   // Create a new user with role Learner
-  async createLearner(data: LearnerRegisterDto, tutor: UserWithRole) {
+  async createLearner(data: LearnerRegisterDto, tutor: IUserWithRole) {
     const temporaryPassword = await this.generatePassword();
     const hash = await argon.hash(temporaryPassword);
     data.password = hash;
@@ -71,6 +74,8 @@ export class UserService {
       console.log('User created:', user);
 
       let emailSent = false;
+
+      // Sent email to learner
       try {
         const mailInfo: SendLearnerCredentialsDto = {
           name: data.name,
@@ -88,6 +93,12 @@ export class UserService {
         console.error('Error sending email:', emailError);
         // Email sending failed, but we'll continue without throwing an error
       }
+
+      // Add new collaboration
+      await this.collaborationService.addNewCollaboration({
+        learnerId: user.id,
+        tutorId: tutor.id,
+      });
 
       return {
         user,
