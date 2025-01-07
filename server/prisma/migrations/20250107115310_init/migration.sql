@@ -27,6 +27,7 @@ CREATE TABLE "User" (
     "company_name" VARCHAR(255) NOT NULL,
     "role_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -83,11 +84,11 @@ CREATE TABLE "PDFContent" (
 );
 
 -- CreateTable
-CREATE TABLE "TextContent" (
+CREATE TABLE "Weblink" (
     "id" SERIAL NOT NULL,
-    "content" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
 
-    CONSTRAINT "TextContent_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Weblink_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -147,19 +148,19 @@ CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 ALTER TABLE "User" ADD CONSTRAINT "User_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "Role"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Course" ADD CONSTRAINT "Course_tutor_id_fkey" FOREIGN KEY ("tutor_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Course" ADD CONSTRAINT "Course_tutor_id_fkey" FOREIGN KEY ("tutor_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Module" ADD CONSTRAINT "Module_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "Course"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Module" ADD CONSTRAINT "Module_course_id_fkey" FOREIGN KEY ("course_id") REFERENCES "Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "VideoContent" ADD CONSTRAINT "VideoContent_id_fkey" FOREIGN KEY ("id") REFERENCES "Module"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "VideoContent" ADD CONSTRAINT "VideoContent_id_fkey" FOREIGN KEY ("id") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PDFContent" ADD CONSTRAINT "PDFContent_id_fkey" FOREIGN KEY ("id") REFERENCES "Module"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PDFContent" ADD CONSTRAINT "PDFContent_id_fkey" FOREIGN KEY ("id") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TextContent" ADD CONSTRAINT "TextContent_id_fkey" FOREIGN KEY ("id") REFERENCES "Module"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Weblink" ADD CONSTRAINT "Weblink_id_fkey" FOREIGN KEY ("id") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_sender_id_fkey" FOREIGN KEY ("sender_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -171,10 +172,10 @@ ALTER TABLE "Message" ADD CONSTRAINT "Message_receiver_id_fkey" FOREIGN KEY ("re
 ALTER TABLE "Notification" ADD CONSTRAINT "Notification_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Collaboration" ADD CONSTRAINT "Collaboration_learner_id_fkey" FOREIGN KEY ("learner_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Collaboration" ADD CONSTRAINT "Collaboration_learner_id_fkey" FOREIGN KEY ("learner_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Collaboration" ADD CONSTRAINT "Collaboration_tutor_id_fkey" FOREIGN KEY ("tutor_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Collaboration" ADD CONSTRAINT "Collaboration_tutor_id_fkey" FOREIGN KEY ("tutor_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Progress" ADD CONSTRAINT "Progress_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

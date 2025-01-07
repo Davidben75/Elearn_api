@@ -15,40 +15,7 @@ services:
         networks:
             - lms_network
 
-    # MONGO SERVER
-    mongo-dev-db:
-        image: mongo:5
-        container_name: lms_mongo
-        environment:
-            MONGO_INITDB_DATABASE: course
-            MONGO_INITDB_ROOT_USERNAME: davidmongo
-            MONGO_INITDB_ROOT_PASSWORD: bb26d3086e48ab42e90dffe68bb8bdfc5c678b0ffc27831fc59f77ae4c9065a6
-            TZ: Europe/Paris
-        ports:
-            - "27018:27017"
-        volumes:
-            - mongo_data:/data/db
-        networks:
-            - lms_network
-
-    # MONGO ADMIN
-    mongo-admin:
-        image: mongo-express
-        container_name: lms_mongo_express
-        environment:
-            ME_CONFIG_MONGODB_ADMINUSERNAME: davidmongo
-            ME_CONFIG_MONGODB_ADMINPASSWORD: bb26d3086e48ab42e90dffe68bb8bdfc5c678b0ffc27831fc59f77ae4c9065a6
-            ME_CONFIG_MONGODB_PORT: 27017
-            ME_CONFIG_MONGODB_SERVER: mongo-dev-db
-            ME_CONFIG_MONGODB_DATABASE: course
-        ports:
-            - 8082:8081
-        depends_on:
-            - mongo-dev-db
-        networks:
-            - lms_network
-
-        # NESTJS SERVER
+    # NESTJS SERVER
     app:
         container_name: lms_api
         build:
@@ -60,7 +27,6 @@ services:
             - "3000:3000"
         depends_on:
             - postgres-dev-db
-            - mongo-dev-db
         volumes:
             - ./server:/usr/src/app
         networks:

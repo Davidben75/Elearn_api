@@ -59,10 +59,11 @@ model User {
   email           String        @unique @db.VarChar(255)
   password        String        @db.VarChar(255)
   status          UserStatus
-  company_name    String        @db.VarChar(255)
-  role_id         Int
-  created_at      DateTime      @default(now())
-  role            Role          @relation(fields: [role_id], references: [id])
+  companyName    String        @db.VarChar(255) @map("company_name")
+  roleId         Int          @map("role_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  role            Role          @relation(fields: [roleId], references: [id])
   progress        Progress[]
   messagesSent    Message[]     @relation("MessageSender")
   messagesReceived Message[]    @relation("MessageReceiver")
@@ -83,87 +84,87 @@ model Course {
   title       String        @db.VarChar(255)
   description String
   status      CourseStatus
-  tutor_id    Int
-  created_at  DateTime      @default(now())
-  updated_at  DateTime      @updatedAt
-  tutor       User          @relation(fields: [tutor_id], references: [id])
+  tutorId    Int           @map("tutor_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  tutor       User          @relation(fields: [tutorId], references: [id] , onDelete: Cascade)
   modules     Module[]
   progress    Progress[]
 }
 
 model Module {
   id           Int     @id @default(autoincrement())
-  course_id    Int
+  courseId    Int @map("course_id")
   title        String  @db.VarChar(255)
-  content_type String  @db.VarChar(50)
-  content_id   Int
+  contentType String  @db.VarChar(50) @map("content_type")
+  contentId   Int @map("content_id")
   order        Int
-  course       Course  @relation(fields: [course_id], references: [id])
+  course       Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   progress     Progress[]
   videoContent VideoContent?
   pdfContent   PDFContent?
-  textContent  TextContent?
+  webLink  Weblink?
 }
 
 model VideoContent {
   id       Int    @id @default(autoincrement())
   url      String @db.VarChar(255)
   duration Int
-  module   Module @relation(fields: [id], references: [id])
+  module   Module @relation(fields: [id], references: [id], onDelete:  Cascade)
 }
 
 model PDFContent {
   id         Int    @id @default(autoincrement())
-  file_path  String @db.VarChar(255)
-  page_count Int
-  module     Module @relation(fields: [id], references: [id])
+  filePath  String @db.VarChar(255) @map("file_path")
+  pageCount Int @map("page_count")
+  module     Module @relation(fields: [id], references: [id], onDelete:  Cascade)
 }
 
-model TextContent {
+model Weblink {
   id      Int    @id @default(autoincrement())
-  content String
-  module  Module @relation(fields: [id], references: [id])
+  url String
+  module  Module @relation(fields: [id], references: [id], onDelete:  Cascade)
 }
 
 model Message {
   id           Int           @id @default(autoincrement())
-  sender_id    Int
-  receiver_id  Int
+  senderId    Int @map("sender_id")
+  receiverId  Int @map("receiver_id")
   content      String
   timestamp    DateTime      @default(now())
   status       MessageStatus
-  sender       User          @relation("MessageSender", fields: [sender_id], references: [id])
-  receiver     User          @relation("MessageReceiver", fields: [receiver_id], references: [id])
+  sender       User          @relation("MessageSender", fields: [senderId], references: [id])
+  receiver     User          @relation("MessageReceiver", fields: [receiverId], references: [id])
 }
 
 model Notification {
   id         Int                @id @default(autoincrement())
-  user_id    Int
+  userId    Int                 @map("user_id")
   content    String
   timestamp  DateTime           @default(now())
   status     NotificationStatus
   type       String             @db.VarChar(50)
-  user       User               @relation(fields: [user_id], references: [id])
+  user       User               @relation(fields: [userId], references: [id])
 }
 
 model Collaboration {
   id           Int                 @id @default(autoincrement())
-  learner_id   Int
-  tutor_id     Int
-  created_at   DateTime            @default(now())
+  learnerId   Int @map("learner_id")
+  tutorId     Int @map("tutor_id")
+  createdAt   DateTime            @default(now()) @map("created_at")
   status       CollaborationStatus
-  learner      User                @relation("LearnerCollaboration", fields: [learner_id], references: [id])
-  tutor        User                @relation("TutorCollaboration", fields: [tutor_id], references: [id])
+  learner      User                @relation("LearnerCollaboration", fields: [learnerId], references: [id], onDelete: Cascade )
+  tutor        User                @relation("TutorCollaboration", fields: [tutorId], references: [id],  onDelete: Cascade)
 }
 
 model Progress {
   id                 Int              @id @default(autoincrement())
-  user_id            Int
-  course_id          Int
-  module_id          Int
-  completion_status  CompletionStatus
-  last_accessed_at   DateTime
-  user               User             @relation(fields: [user_id], references: [id])
-  course             Course           @relation(fields: [course_id], references: [id])
-  module             Module           @relation(fields: [module_id], references: [id])
+  userId            Int  @map("user_id")
+  courseId          Int  @map("course_id")
+  moduleId          Int  @map("module_id")
+  completionStatus  CompletionStatus  @map("completion_status")
+  lastAccessedAt   DateTime  @map("last_accessed_at")
+  user               User             @relation(fields: [userId], references: [id])
+  course             Course           @relation(fields: [courseId], references: [id])
+  module             Module           @relation(fields: [moduleId], references: [id])
 }
