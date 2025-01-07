@@ -18,7 +18,7 @@ export class CourseService {
     try {
       return await this.prismaService.course.findMany({
         where: {
-          tutor_id: tutorId,
+          tutorId: tutorId,
         },
       });
     } catch (error) {

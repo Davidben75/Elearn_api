@@ -32,9 +32,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       lastname: user.lastname,
       email: user.email,
       status: user.status,
-      companyName: user.company_name,
-      role: this.getRolename(user.role_id),
-      createdAt: user.created_at,
+      companyName: user.companyName,
+      role: this.getRolename(user.roleId),
+      createdAt: user.createdAt,
     };
     return UserWithRole;
   }
@@ -50,4 +50,3 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
   }
 }
-//  Create a decorator that check if the isTutor if not go find the collaborator table and check if the collaborator is active and retriev the tutorId

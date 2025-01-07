@@ -51,9 +51,9 @@ export class AuthService {
     const payload: PayloadDto = {
       sub: user.id,
       email: user.email,
-      roleId: user.role_id,
+      roleId: user.roleId,
       status: user.status,
-      companyName: user.company_name,
+      companyName: user.companyName,
     };
     const token = await this.jwt.signAsync(payload, {
       expiresIn: '1h',

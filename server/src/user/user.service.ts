@@ -8,7 +8,7 @@ import * as argon from 'argon2';
 import { RegisterDto } from '../auth/dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { generate } from 'generate-password-ts';
-import { LearnerRegisterDto, UpdatePasswordDto } from './dto';
+import { LearnerRegisterDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { MailService } from '../mail/mail.service';
 import { SendLearnerCredentialsDto } from '../mail/dto/send-learner-credentials.interface';
 import { IUserWithRole } from '../common/interfaces';
@@ -33,8 +33,8 @@ export class UserService {
           lastname: dto.lastName,
           email: dto.email,
           password: dto.password,
-          company_name: dto.companyName,
-          role_id: 2,
+          companyName: dto.companyName,
+          roleId: 2,
           status: 'ACTIVE',
         },
       });
@@ -64,8 +64,8 @@ export class UserService {
           lastname: data.lastName,
           email: data.email,
           password: data.password,
-          company_name: tutor.companyName,
-          role_id: 3,
+          companyName: tutor.companyName,
+          roleId: 3,
           status: 'INACTIVE',
         },
       });
@@ -102,7 +102,8 @@ export class UserService {
 
       return {
         user,
-        temporaryPassword,
+        // Only for testing
+        //temporaryPassword,
         emailSent,
       };
     } catch (error) {
@@ -118,7 +119,6 @@ export class UserService {
   }
 
   // Change password
-
   async updatePassword(dto: UpdatePasswordDto, email: string) {
     try {
       const user = await this.findUserByMail(email);
@@ -167,6 +167,47 @@ export class UserService {
     return await this.prismaService.user.findUnique({
       where: {
         email: email,
+      },
+    });
+  }
+
+  //Update userInfo
+  async updateUserInfo(id: number, dto: UpdateUserDto) {
+    try {
+      const currentUser = await this.findUserById(id);
+      const updatedUser: Partial<UpdateUserDto> = {};
+
+      Object.keys(dto).forEach((key) => {
+        if (dto[key] !== undefined) {
+          updatedUser[key] = dto[key];
+        }
+      });
+
+      if (Object.keys(updatedUser).length === 0) {
+        delete currentUser.password;
+        return currentUser;
+      }
+
+      const user = await this.prismaService.user.update({
+        where: {
+          id: id,
+        },
+        data: {
+          ...updatedUser,
+        },
+      });
+
+      return user;
+    } catch (error) {
+      console.error('Error in updateUserInfo:', error);
+      throw new BadRequestException('Something went wrong');
+    }
+  }
+
+  async findUserById(id: number) {
+    return await this.prismaService.user.findUnique({
+      where: {
+        id: id,
       },
     });
   }

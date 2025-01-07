@@ -17,14 +17,14 @@ export class TutorIdGuard implements CanActivate {
     } else {
       const collaboration = await this.prismaService.collaboration.findFirst({
         where: {
-          learner_id: user.id,
+          learnerId: user.id,
         },
         select: {
-          tutor_id: true,
+          tutorId: true,
         },
       });
       if (collaboration) {
-        request.tutorId = collaboration.tutor_id;
+        request.tutorId = collaboration.tutorId;
       } else {
         throw new ForbiddenException('You are not link to a tutor');
       }

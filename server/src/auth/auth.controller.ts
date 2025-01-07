@@ -20,6 +20,7 @@ export class AuthController {
       const newUser = await this.authService.register(registerDto);
       return successResponse(newUser, 'User created successfully', 201);
     } catch (error) {
+      console.log(error);
       throw new BadRequestException(error.message);
     }
   }

@@ -10,7 +10,9 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
           'Your session has expired. Please login again.',
         );
       }
-      throw err || new UnauthorizedException('Session not validated');
+      throw (
+        err || new UnauthorizedException('Session not validated. Please login')
+      );
     }
     return user;
   }
