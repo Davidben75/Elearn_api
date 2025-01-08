@@ -4,7 +4,7 @@
 entity User {
   +id: SERIAL <<PK>>
   +name: VARCHAR(100)
-  +lastname: VARCHAR(100)
+  +last_name: VARCHAR(100)
   +email: VARCHAR(255) UNIQUE
   +password: VARCHAR(255)
   +status: UserStatus

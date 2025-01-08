@@ -29,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const UserWithRole: IUserWithRole = {
       id: user.id,
       name: user.name,
-      lastname: user.lastname,
+      lastname: user.lastName,
       email: user.email,
       status: user.status,
       companyName: user.companyName,

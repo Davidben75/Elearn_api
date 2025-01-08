@@ -30,7 +30,7 @@ export class UserService {
       const user = await this.prismaService.user.create({
         data: {
           name: dto.name,
-          lastname: dto.lastName,
+          lastName: dto.lastName,
           email: dto.email,
           password: dto.password,
           companyName: dto.companyName,
@@ -61,7 +61,7 @@ export class UserService {
       const user = await this.prismaService.user.create({
         data: {
           name: data.name,
-          lastname: data.lastName,
+          lastName: data.lastName,
           email: data.email,
           password: data.password,
           companyName: tutor.companyName,
@@ -185,6 +185,7 @@ export class UserService {
 
       if (Object.keys(updatedUser).length === 0) {
         delete currentUser.password;
+        delete currentUser.roleId;
         return currentUser;
       }
 
@@ -197,6 +198,8 @@ export class UserService {
         },
       });
 
+      delete user.password;
+      delete user.roleId;
       return user;
     } catch (error) {
       console.error('Error in updateUserInfo:', error);

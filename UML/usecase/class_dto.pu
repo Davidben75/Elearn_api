@@ -18,7 +18,7 @@ class LoginDto {
 
 class LearnerCredentialMailDto {
   +name: string
-  +lastname: string
+  +lastName: string
   +email: string
   +password : string
   +tutorName : string
@@ -28,7 +28,7 @@ class LearnerCredentialMailDto {
 class IUserWithRoleDto {
   +id: number
   +name: string
-  +lastname: string
+  +lastName: string
   +email: string
   +status: string
   +company_name: string
