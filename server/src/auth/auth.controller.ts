@@ -20,8 +20,12 @@ export class AuthController {
       const newUser = await this.authService.register(registerDto);
       return successResponse(newUser, 'User created successfully', 201);
     } catch (error) {
-      console.log(error);
-      throw new BadRequestException(error.message);
+      console.log('error AUTH', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      } else {
+        throw new BadRequestException(error.message || 'Bad Request');
+      }
     }
   }
 

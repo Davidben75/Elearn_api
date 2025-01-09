@@ -1,7 +1,8 @@
 import { MailerService } from '@nestjs-modules/mailer';
 import { Injectable } from '@nestjs/common';
 import { RegisterDto } from '../auth/dto';
-import { SendLearnerCredentialsDto } from './dto/send-learner-credentials.interface';
+import { ISendLearnerCredentials } from '../common/interfaces';
+import { ISendMail } from 'src/common/interfaces/send-mail.interface';
 
 @Injectable()
 export class MailService {
@@ -26,7 +27,7 @@ export class MailService {
     }
   }
 
-  async sendLearnerCredentials(dto: SendLearnerCredentialsDto) {
+  async sendLearnerCredentials(dto: ISendLearnerCredentials) {
     console.log('Received DTO in MailService:', JSON.stringify(dto, null, 2));
     try {
       const loginUrl = `http://localhost:3000/auth/login`;
@@ -47,6 +48,35 @@ export class MailService {
         },
       });
       console.log('Email sent successfully');
+    } catch (error) {
+      console.error('Detailed error in sendLearnerCredentials:', error);
+      throw new Error(`Error sending learner credentials email ; ${error}`);
+    }
+  }
+
+  async sendUserInformationHasBeenUpdated(
+    info: ISendMail,
+    passwordUpdated: boolean = false,
+  ) {
+    try {
+      console.log('Preparing to send email to:', info.email);
+
+      const subject = passwordUpdated
+        ? 'Your password has been updated'
+        : 'Your account information has been updated';
+
+      const template = passwordUpdated ? 'password-updated' : 'info-updated';
+
+      return await this.mailerService.sendMail({
+        to: info.email,
+        from: 'noreply@lms.com',
+        subject,
+        template,
+        context: {
+          name: info.name,
+          lastName: info.lastName,
+        },
+      });
     } catch (error) {
       console.error('Detailed error in sendLearnerCredentials:', error);
       throw new Error(`Error sending learner credentials email ; ${error}`);

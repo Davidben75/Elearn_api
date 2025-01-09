@@ -1,4 +1,4 @@
-export interface SendLearnerCredentialsDto {
+export interface ISendLearnerCredentials {
   name: string;
   lastName: string;
   email: string;

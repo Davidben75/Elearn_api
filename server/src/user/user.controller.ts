@@ -2,8 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
+  Param,
+  Patch,
   Post,
   Put,
   Req,
@@ -13,7 +16,7 @@ import {
 import { JwtAuthGuard, RoleGuard } from '../common/guard';
 import { StatusActiveGuard } from '../common/guard/status.guard';
 import { UserService } from './user.service';
-import { LearnerRegisterDto, UpdatePasswordDto } from './dto';
+import { LearnerRegisterDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { successResponse } from '../utils';
 import { IUserWithRole } from '../common/interfaces';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -74,19 +77,37 @@ export class UserController {
   @HttpCode(200)
   async updatePassword(@Body() dto: UpdatePasswordDto, @Req() req) {
     const user = req.user as IUserWithRole;
-    console.log(user);
     try {
-      const updatedUser = await this.userService.updatePassword(
-        dto,
-        user.email,
-      );
-
+      const updatedUser = await this.userService.updatePassword(dto, user.id);
       return successResponse(updatedUser, 'Password updated successfully', 200);
     } catch (error) {
       throw new BadRequestException(error.message);
     }
   }
 
+  @Patch('update-info')
+  @HttpCode(200)
+  async updateInfo(@Body() dto: UpdateUserDto, @Req() req) {
+    const userId = req.user.id;
+    try {
+      const updatedUser = await this.userService.updateUserInfo(userId, dto);
+      return successResponse(updatedUser, 'User updated successfully', 200);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Delete('delete/:id')
+  @HttpCode(200)
+  async delete(@Req() req, @Param('id') id: number) {
+    const user = req.user;
+    try {
+      const deletedUser = await this.userService.deleteUser(id, user);
+      return successResponse(deletedUser, 'User deleted successfully', 200);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
   // -------------
   // ADMIN ACTIONS
   // -------------

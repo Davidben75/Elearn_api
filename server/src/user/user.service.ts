@@ -10,9 +10,11 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { generate } from 'generate-password-ts';
 import { LearnerRegisterDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { MailService } from '../mail/mail.service';
-import { SendLearnerCredentialsDto } from '../mail/dto/send-learner-credentials.interface';
+import { ISendLearnerCredentials } from '../common/interfaces';
 import { IUserWithRole } from '../common/interfaces';
 import { CollaborationService } from '../collaboration/collaboration.service';
+import { UserStatus } from '@prisma/client';
+import { ISendMail } from 'src/common/interfaces/send-mail.interface';
 
 @Injectable()
 export class UserService {
@@ -41,6 +43,7 @@ export class UserService {
       delete user.password;
       return user;
     } catch (error) {
+      console.log('error USER SERVICE' + error);
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           throw new ForbiddenException('Email already in use');
@@ -77,7 +80,7 @@ export class UserService {
 
       // Sent email to learner
       try {
-        const mailInfo: SendLearnerCredentialsDto = {
+        const mailInfo: ISendLearnerCredentials = {
           name: data.name,
           lastName: data.lastName,
           email: data.email,
@@ -119,9 +122,9 @@ export class UserService {
   }
 
   // Change password
-  async updatePassword(dto: UpdatePasswordDto, email: string) {
+  async updatePassword(dto: UpdatePasswordDto, id: number) {
     try {
-      const user = await this.findUserByMail(email);
+      const user = await this.findUserById(id);
 
       const passwordMatches = await argon.verify(
         user.password,
@@ -132,10 +135,13 @@ export class UserService {
         throw new ForbiddenException('Old password is incorrect');
       }
 
-      let newstatus = user.status;
-      if (newstatus == 'INACTIVE') {
-        newstatus = 'ACTIVE';
+      if (dto.newPassword === dto.oldPassword) {
+        throw new BadRequestException(
+          'New password cannot be the same as the old password',
+        );
       }
+
+      const newstatus = this.updateStatus(user.status);
 
       const hash = await argon.hash(dto.newPassword);
       const updatedUser = await this.prismaService.user.update({
@@ -149,7 +155,25 @@ export class UserService {
       });
 
       delete updatedUser.password;
-      return updatedUser;
+      delete user.roleId;
+
+      // Send when password has been updated
+      let emailSent = false;
+      try {
+        const emailData: ISendMail = {
+          email: updatedUser.email,
+          name: updatedUser.name,
+          lastName: updatedUser.lastName,
+        };
+        await this.mailService.sendUserInformationHasBeenUpdated(
+          emailData,
+          true,
+        );
+        emailSent = true;
+      } catch (emailError) {
+        console.log(emailError);
+      }
+      return { updatedUser, emailSent };
     } catch (error) {
       if (error instanceof ForbiddenException) {
         throw error;
@@ -160,6 +184,10 @@ export class UserService {
         'Something went wrong when changing password',
       );
     }
+  }
+
+  private updateStatus(currentStatus: UserStatus): UserStatus {
+    return currentStatus === 'INACTIVE' ? 'ACTIVE' : currentStatus;
   }
 
   // Find user by email
@@ -178,7 +206,7 @@ export class UserService {
       const updatedUser: Partial<UpdateUserDto> = {};
 
       Object.keys(dto).forEach((key) => {
-        if (dto[key] !== undefined) {
+        if (dto[key] !== '' && dto[key] !== undefined && dto[key] !== null) {
           updatedUser[key] = dto[key];
         }
       });
@@ -200,13 +228,29 @@ export class UserService {
 
       delete user.password;
       delete user.roleId;
-      return user;
+
+      // Send the mail
+      let emailSent = false;
+
+      try {
+        const emailData: ISendMail = {
+          name: user.name,
+          lastName: user.lastName,
+          email: user.email,
+        };
+        await this.mailService.sendUserInformationHasBeenUpdated(emailData);
+        emailSent = true;
+      } catch (errorMail) {
+        console.log(errorMail);
+      }
+      return { user, emailSent };
     } catch (error) {
       console.error('Error in updateUserInfo:', error);
       throw new BadRequestException('Something went wrong');
     }
   }
 
+  // Find user by id
   async findUserById(id: number) {
     return await this.prismaService.user.findUnique({
       where: {
@@ -215,6 +259,41 @@ export class UserService {
     });
   }
 
+  // Delete user by id
+  async deleteUser(id: number, user: IUserWithRole) {
+    try {
+      if (user.role === 'ADMIN') {
+        await this.prismaService.user.delete({
+          where: {
+            id: id,
+          },
+        });
+      } else if (user.role === 'TUTOR' || user.role === 'LEARNER') {
+        if (user.id === id) {
+          await this.prismaService.user.delete({
+            where: {
+              id: id,
+            },
+          });
+        }
+      } else {
+        throw new ForbiddenException(
+          'You are not authorized to perform this action',
+        );
+      }
+    } catch (error) {
+      console.error('Error in deleteById:', error);
+      throw new BadRequestException('Something went wrong');
+    }
+  }
+
+  // Learner delete account
+
+  // Tutor delete account
+
+  // Admin delete account
+
+  // Generate password
   async generatePassword(): Promise<string> {
     return await generate({
       length: 10,

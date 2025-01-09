@@ -1,19 +1,19 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
   @IsString()
   name?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   lastName?: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   companyName?: string;
 
   @IsEmail({}, { message: 'Please enter a valid email' })
-  @IsNotEmpty()
+  @IsOptional()
   email?: string;
 }

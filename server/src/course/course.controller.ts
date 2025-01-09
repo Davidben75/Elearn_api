@@ -47,7 +47,8 @@ export class CourseController {
   async getCourseByTutor(@Req() req) {
     try {
       const tutorId = req.tutorId;
-      return tutorId ?? 'You are not link to a tutor';
+      const message = 'Courses found successfully ' + tutorId;
+      return message ?? 'You are not link to a tutor';
       // const courses = await this.courseService.getByTutorId(req.user.id);
       // let message = 'Courses found successfully';
       // if (courses.length === 0) {

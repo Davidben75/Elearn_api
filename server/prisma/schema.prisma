@@ -51,6 +51,11 @@ enum CompletionStatus {
   NOT_STARTED
 }
 
+enum EnrollmentStatus {
+  ACTIVE
+  DROPPED
+}
+
 // Models
 model User {
   id              Int           @id @default(autoincrement())
@@ -69,6 +74,7 @@ model User {
   messagesReceived Message[]    @relation("MessageReceiver")
   notifications   Notification[]
   coursesAsTutor  Course[]
+  enrollments Enrollment[]
   collaborationsAsLearner Collaboration[] @relation("LearnerCollaboration")
   collaborationsAsTutor Collaboration[]   @relation("TutorCollaboration")
 }
@@ -90,6 +96,20 @@ model Course {
   tutor       User          @relation(fields: [tutorId], references: [id] , onDelete: Cascade)
   modules     Module[]
   progress    Progress[]
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  courseId  Int      @map("course_id")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+  status    EnrollmentStatus @default(ACTIVE)
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId]) // Ensure a user cannot enroll in the same course multiple times
 }
 
 model Module {
