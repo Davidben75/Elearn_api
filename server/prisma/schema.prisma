@@ -29,6 +29,12 @@ enum CourseStatus {
   INACTIVE
 }
 
+enum ContentType {
+  VIDEO
+  PDF 
+  WEBLINK
+}
+
 enum MessageStatus {
   READ
   UNREAD
@@ -116,8 +122,7 @@ model Module {
   id           Int     @id @default(autoincrement())
   courseId    Int @map("course_id")
   title        String  @db.VarChar(255)
-  contentType String  @db.VarChar(50) @map("content_type")
-  contentId   Int @map("content_id")
+  contentType  ContentType
   order        Int
   course       Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   progress     Progress[]
@@ -128,6 +133,7 @@ model Module {
 
 model VideoContent {
   id       Int    @id @default(autoincrement())
+  moduleId Int  @map("module_id")
   url      String @db.VarChar(255)
   duration Int
   module   Module @relation(fields: [id], references: [id], onDelete:  Cascade)
@@ -135,6 +141,7 @@ model VideoContent {
 
 model PDFContent {
   id         Int    @id @default(autoincrement())
+  moduleId          Int  @map("module_id")
   filePath  String @db.VarChar(255) @map("file_path")
   pageCount Int @map("page_count")
   module     Module @relation(fields: [id], references: [id], onDelete:  Cascade)
@@ -142,6 +149,7 @@ model PDFContent {
 
 model Weblink {
   id      Int    @id @default(autoincrement())
+  moduleId          Int  @map("module_id")
   url String
   module  Module @relation(fields: [id], references: [id], onDelete:  Cascade)
 }
