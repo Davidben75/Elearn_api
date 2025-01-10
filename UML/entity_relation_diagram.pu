@@ -32,26 +32,29 @@ entity Module {
   +id: SERIAL <<PK>>
   +course_id: INTEGER <<FK>>
   +title: VARCHAR(255)
-  +content_type: VARCHAR(50)
-  +content_id: INTEGER
+  +content_type: ContentType
   +order: INTEGER
 }
 
 entity VideoContent {
   +id: SERIAL <<PK>>
+  +module_id : INTEGER <<FK>>
   +url: VARCHAR(255)
   +duration: INTEGER
 }
 
 entity PDFContent {
   +id: SERIAL <<PK>>
+  +module_id : INTEGER <<FK>>
   +file_path: VARCHAR(255)
   +page_count: INTEGER
 }
 
-entity TextContent {
+entity WebLink {
   +id: SERIAL <<PK>>
-  +content: TEXT
+  +module_id : INTEGER <<FK>>
+  +description: TEXT
+  +url: VARCHAR(255)
 }
 
 entity Message {
@@ -100,6 +103,12 @@ enum CourseStatus {
   INACTIVE
 }
 
+enum ContentType {
+  VIDEO
+  PDF
+  WEBLINK
+}
+
 enum MessageStatus {
   READ
   UNREAD
@@ -139,13 +148,13 @@ Collaboration ||--o{ User : "A tutor has many learners"
 
 Module ||--o{ VideoContent : "Has"
 Module ||--o{ PDFContent : "Has"
-Module ||--o{ TextContent : "Has"
+Module ||--o{ WebLink : "Has"
 
 note right of Module
-  content_type determines which content table to use:
-  - "video" for VideoContent
-  - "pdf" for PDFContent
-  - "text" for TextContent
+content_type determines which content table to use:
+- "video" for VideoContent
+- "pdf" for PDFContent
+- "weblink" for WebLink
 end note
 
 @enduml
