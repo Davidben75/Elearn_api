@@ -133,25 +133,26 @@ model Module {
 
 model VideoContent {
   id       Int    @id @default(autoincrement())
-  moduleId Int  @map("module_id")
+  moduleId Int  @map("module_id") @unique
   url      String @db.VarChar(255)
-  duration Int
-  module   Module @relation(fields: [id], references: [id], onDelete:  Cascade)
+  duration Int ?
+  module   Module @relation(fields: [moduleId], references: [id], onDelete:  Cascade)
+
 }
 
 model PDFContent {
   id         Int    @id @default(autoincrement())
-  moduleId          Int  @map("module_id")
+  moduleId          Int  @map("module_id") @unique
   filePath  String @db.VarChar(255) @map("file_path")
-  pageCount Int @map("page_count")
-  module     Module @relation(fields: [id], references: [id], onDelete:  Cascade)
+  pageCount Int? @map("page_count")
+  module     Module @relation(fields: [moduleId], references: [id], onDelete:  Cascade)
 }
 
 model Weblink {
   id      Int    @id @default(autoincrement())
-  moduleId          Int  @map("module_id")
+  moduleId          Int  @map("module_id") @unique
   url String
-  module  Module @relation(fields: [id], references: [id], onDelete:  Cascade)
+  module  Module @relation(fields: [moduleId], references: [id], onDelete:  Cascade)
 }
 
 model Message {
