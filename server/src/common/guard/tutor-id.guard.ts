@@ -12,7 +12,7 @@ export class TutorIdGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    if (user.role === 'TUTOR') {
+    if (user.role === 'TUTOR' || user.role === 'ADMIN') {
       request.tutorId = user.id;
     } else {
       const collaboration = await this.prismaService.collaboration.findFirst({
