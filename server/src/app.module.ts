@@ -6,10 +6,16 @@ import { MailModule } from './mail/mail.module';
 import { PrismaModule } from './database/prisma.module';
 import { CourseModule } from './course/course.module';
 import { CollaborationModule } from './collaboration/collaboration.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/course/files',
+    }),
     PrismaModule,
     AuthModule,
     UserModule,

@@ -3,8 +3,11 @@
 /server/node_modules
 /server/build
 
+# upload files
+/server/uploads
+
 # OS
 .DS_Store
 
 # dotenv environment variable files
-.env
+*.env

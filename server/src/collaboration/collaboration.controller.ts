@@ -10,9 +10,8 @@ import {
 import { CollaborationService } from './collaboration.service';
 import { successResponse } from 'src/utils';
 import { JwtAuthGuard, RoleGuard, StatusActiveGuard } from 'src/common/guard';
-import { Roles } from 'src/common/decorators';
+import { GetUser, Roles } from 'src/common/decorators';
 import { TutorIdGuard } from 'src/common/guard/tutor-id.guard';
-import { User } from 'src/common/decorators/user.decorator';
 
 @UseGuards(JwtAuthGuard, RoleGuard, StatusActiveGuard)
 @Controller('collaboration')
@@ -23,7 +22,7 @@ export class CollaborationController {
   @Roles('tutor')
   @UseGuards(TutorIdGuard)
   @Get('tutor')
-  async getCollaborationByTutor(@User() user, @Req() req) {
+  async getCollaborationByTutor(@GetUser() user, @Req() req) {
     try {
       const tutorId = req.tutorId;
       const collaborations =
@@ -49,7 +48,7 @@ export class CollaborationController {
   //   UPDATE STATUS COLLABORATION
   @Patch(':collaborationId')
   @Roles('admin', 'tutor')
-  async updateCollaborationStatus(collaborationId: number, @User() user) {
+  async updateCollaborationStatus(collaborationId: number, @GetUser() user) {
     try {
       const updatedCollaboration =
         await this.collaborationService.updateCollaborationStatus(
@@ -67,7 +66,7 @@ export class CollaborationController {
   //   DELELETE COLLABORATION
   @Delete('delete/:collaborationId')
   @Roles('admin, tutor')
-  async deleteCollaboration(collaborationId: number, @User() user) {
+  async deleteCollaboration(collaborationId: number, @GetUser() user) {
     try {
       const deletedCollaboration =
         await this.collaborationService.deleteCollaboration(
@@ -108,7 +107,7 @@ export class CollaborationController {
   //   GET COLLABORATION BY TUTOR ID
   @Roles('admin')
   @Get('tutor/:id')
-  async getCollaborationById(id: number, @User() user) {
+  async getCollaborationById(id: number, @GetUser() user) {
     try {
       const collaboration =
         await this.collaborationService.getCollaborationByTutorId(id, user);

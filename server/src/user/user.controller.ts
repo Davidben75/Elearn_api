@@ -19,8 +19,8 @@ import { UserService } from './user.service';
 import { LearnerRegisterDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { successResponse } from '../utils';
 import { IUserWithRole } from '../common/interfaces';
-import { Roles } from '../common/decorators/roles.decorator';
-import { User } from '../common/decorators/user.decorator';
+import { Roles } from '../common/decorators';
+import { GetUser } from '../common/decorators';
 
 @UseGuards(JwtAuthGuard, RoleGuard, StatusActiveGuard)
 @Controller('user')
@@ -61,7 +61,7 @@ export class UserController {
   // Get user Info
   @Get('me')
   @HttpCode(200)
-  async getMe(@User() user: IUserWithRole) {
+  async getMe(@GetUser() user: IUserWithRole) {
     try {
       if (!user) {
         throw new UnauthorizedException('User not authenticated');
