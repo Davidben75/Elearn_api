@@ -185,6 +185,9 @@ export class CourseController {
   ) {
     const tutorId = req.tutorId;
     try {
+      if (updateModule.contentType === ContentType.PDF && !file) {
+        throw new BadRequestException('PDF file is required');
+      }
       if (file) {
         updateModule.filePath = file.filename;
         updateModule.originalName = file.originalname;
@@ -200,6 +203,7 @@ export class CourseController {
 
       return successResponse(updateCourse, 'Course updated successfully', 200);
     } catch (error) {
+      console.log(error);
       if (error instanceof BadRequestException) {
         throw error;
       } else {

@@ -141,81 +141,90 @@ export class CourseService {
     tutorId: number,
     file?: Express.Multer.File,
   ) {
-    try {
-      // Verify if tutor is authorized to update
-      const isAuthorized = await this.checkIfCourseMatchTutorId(
-        data.courseId,
-        tutorId,
-      );
-      if (!isAuthorized) {
-        throw new UnauthorizedException(
-          'You are not authorized to perform this action',
+    return this.prismaService.$transaction(async (prisma) => {
+      try {
+        // Verify if tutor is authorized to update
+        const isAuthorized = await this.checkIfCourseMatchTutorId(
+          data.courseId,
+          tutorId,
         );
-      }
+        if (!isAuthorized) {
+          throw new UnauthorizedException(
+            'You are not authorized to perform this action',
+          );
+        }
 
-      const contentId: string = data.contentId ?? '';
-      // Retrieve the current module
-      const currentModuleInfo = await this.findModuleWithSpecificContent(
-        moduleId,
-        contentId,
-      );
+        const contentId: string = data.contentId;
 
-      // Check if the module exists
-      if (!currentModuleInfo) {
-        throw new NotFoundException('Module not found');
-      }
+        const currentModuleInfo = await this.findModuleWithSpecificContent(
+          moduleId,
+          contentId,
+        );
 
-      await this.updateContent(currentModuleInfo, data, contentId, file);
+        // Check if the module exists
+        if (!currentModuleInfo) {
+          throw new NotFoundException('Module not found');
+        }
 
-      const updateModuleData: Prisma.ModuleUpdateInput = {};
-      if (data.title && data.title !== currentModuleInfo.title) {
-        updateModuleData.title = data.title;
-      }
-      if (
-        data.contentType &&
-        data.contentType !== currentModuleInfo.contentType
-      ) {
-        updateModuleData.contentType = data.contentType;
-      }
+        // Update the content
+        await this.updateContent(
+          prisma,
+          currentModuleInfo,
+          data,
+          contentId,
+          file,
+        );
 
-      // If update module if changes exist
-      if (Object.keys(updateModuleData).length > 0)
-        await this.prismaService.module.update({
-          where: {
-            id: moduleId,
+        const updateModuleData: Prisma.ModuleUpdateInput = {};
+        if (data.title && data.title !== currentModuleInfo.title) {
+          updateModuleData.title = data.title;
+        }
+        if (
+          data.contentType &&
+          data.contentType !== currentModuleInfo.contentType
+        ) {
+          updateModuleData.contentType = data.contentType;
+        }
+
+        // If update module if changes exist
+        if (Object.keys(updateModuleData).length > 0)
+          await prisma.module.update({
+            where: {
+              id: moduleId,
+            },
+            data: updateModuleData,
+          });
+
+        // Fetch and return the updated course with all related data
+        const fetchedCourse = await prisma.course.findUnique({
+          where: { id: data.courseId },
+          include: {
+            modules: {
+              orderBy: {
+                order: 'asc',
+              },
+              include: {
+                videoContent: true,
+                pdfContent: true,
+                webLink: true,
+              },
+            },
           },
-          data: updateModuleData,
         });
 
-      // Fetch and return the updated course with all related data
-      const fetchedCourse = await this.prismaService.course.findUnique({
-        where: { id: data.courseId },
-        include: {
-          modules: {
-            orderBy: {
-              order: 'asc',
-            },
-            include: {
-              videoContent: true,
-              pdfContent: true,
-              webLink: true,
-            },
-          },
-        },
-      });
-
-      return this.removeNullContent(fetchedCourse);
-    } catch (error) {
-      console.log('ERROR in updateModule :', error);
-      if (
-        error instanceof UnauthorizedException ||
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
+        return this.removeNullContent(fetchedCourse);
+      } catch (error) {
+        console.log('ERROR in updateModule :', error);
+        if (
+          error instanceof UnauthorizedException ||
+          error instanceof NotFoundException ||
+          error instanceof BadRequestException
+        ) {
+          throw error;
+        }
+        throw new BadRequestException('Something went wrong updating Module');
       }
-      throw new BadRequestException('Something went wrong');
-    }
+    });
   }
 
   async findModuleWithSpecificContent(moduleId: number, contentId: string) {
@@ -242,6 +251,7 @@ export class CourseService {
   }
 
   async updateContent(
+    prisma: Prisma.TransactionClient,
     currentModuleInfo: any,
     data: UpdateModuleDto,
     contentId: string,
@@ -259,104 +269,11 @@ export class CourseService {
         data.contentType &&
         data.contentType !== currentModuleInfo.contentType
       ) {
-        // Create the new content base on the new content type
-        switch (data.contentType) {
-          case ContentType.VIDEO:
-            await this.prismaService.videoContent.create({
-              data: {
-                url: data.url,
-                duration: data.duration ?? 0,
-                module: {
-                  connect: {
-                    id: moduleId,
-                  },
-                },
-              },
-            });
-            break;
-          case ContentType.PDF:
-            if (!file) {
-              throw new BadRequestException('PDF file is required');
-            }
-            await this.prismaService.pDFContent.create({
-              data: {
-                filePath: data.filePath,
-                originalName: data.originalName,
-                pageCount: data.pageCount ?? 0,
-                module: {
-                  connect: {
-                    id: moduleId,
-                  },
-                },
-              },
-            });
-            break;
-          case ContentType.WEBLINK:
-            await this.prismaService.weblink.create({
-              data: {
-                url: data.url,
-                module: {
-                  connect: {
-                    id: moduleId,
-                  },
-                },
-              },
-            });
-            break;
-          default:
-            throw new BadRequestException('Invalid content type');
-        }
-
-        // Remove the pdf file if the current content type is PDF
-        if (currentModuleInfo.contentType === ContentType.PDF) {
-          this.removeFile(currentModuleInfo.pdfContent.filePath);
-        }
-
-        // Remove the old content
-        this.deleteDependindOnContentType(
-          currentModuleInfo.contentType as ContentType,
-          contentId,
-        );
-      }
-
-      // If url changed
-      if (data.url) {
-        if (currentModuleInfo.contentType === ContentType.VIDEO) {
-          await this.prismaService.videoContent.update({
-            where: {
-              id: contentId,
-            },
-            data: {
-              url: data.url,
-              duration: data.duration ?? 0,
-            },
-          });
-        } else if (currentModuleInfo.contentType === ContentType.WEBLINK) {
-          await this.prismaService.weblink.update({
-            where: {
-              id: contentId,
-            },
-            data: {
-              url: data.url,
-            },
-          });
-        }
-      }
-
-      // If pdf file changed
-      if (file) {
-        // Remove the old file
-        this.removeFile(currentModuleInfo.pdfContent.filePath);
-        await this.prismaService.pDFContent.update({
-          where: {
-            id: contentId,
-          },
-          data: {
-            filePath: file.filename,
-            originalName: data.originalName,
-            pageCount: data.pageCount ?? 0,
-          },
-        });
+        // Content Type change
+        this.handleContentTypeChange(prisma, currentModuleInfo, data);
+      } else {
+        // Update existing content
+        this.updateExistingContent(prisma, currentModuleInfo, data, file);
       }
     } catch (error) {
       console.log('ERROR in updateContent :', error, currentModuleInfo);
@@ -367,30 +284,135 @@ export class CourseService {
     }
   }
 
+  async updateExistingContent(
+    prisma: Prisma.TransactionClient,
+    currentModuleInfo: any,
+    data: UpdateModuleDto,
+    file?: Express.Multer.File,
+  ) {
+    switch (currentModuleInfo.contentType) {
+      case ContentType.VIDEO:
+        if (data.url) {
+          await prisma.videoContent.update({
+            where: { id: data.contentId },
+            data: {
+              url: data.url,
+              duration: data.duration ?? 0,
+            },
+          });
+        }
+        break;
+
+      case ContentType.PDF:
+        if (file) {
+          await this.removeFile(currentModuleInfo.pdfContent?.filePath);
+          await prisma.pDFContent.update({
+            where: { id: data.contentId },
+            data: {
+              filePath: file.filename,
+              originalName: file.originalname,
+            },
+          });
+        }
+        break;
+
+      case ContentType.WEBLINK:
+        if (data.url) {
+          await prisma.weblink.update({
+            where: { id: data.contentId },
+            data: {
+              url: data.url,
+            },
+          });
+        }
+        break;
+    }
+  }
+
+  async handleContentTypeChange(
+    prisma: Prisma.TransactionClient,
+    currentModuleInfo: any,
+    data: UpdateModuleDto,
+  ) {
+    try {
+      switch (data.contentType) {
+        case ContentType.VIDEO:
+          await prisma.videoContent.create({
+            data: {
+              url: data.url,
+              duration: data.duration ?? 0,
+              module: { connect: { id: currentModuleInfo.id } },
+            },
+          });
+          break;
+
+        case ContentType.PDF:
+          await this.removeFile(currentModuleInfo.pdfContent?.filePath);
+          await prisma.pDFContent.create({
+            data: {
+              filePath: data.filePath,
+              originalName: data.originalName,
+              pageCount: data.pageCount ?? 0,
+              module: { connect: { id: currentModuleInfo.id } },
+            },
+          });
+          break;
+
+        case ContentType.WEBLINK:
+          await prisma.weblink.create({
+            data: {
+              url: data.url,
+              module: { connect: { id: currentModuleInfo.id } },
+            },
+          });
+          break;
+        default:
+          throw new BadRequestException('Invalid content tupe');
+      }
+
+      if (currentModuleInfo.contentType === ContentType.PDF) {
+        this.removeFile(currentModuleInfo.pdfContent?.filePath);
+      }
+
+      await this.deleteDependindOnContentType(
+        prisma,
+        currentModuleInfo.contentType,
+        data.contentId,
+      );
+    } catch (error) {
+      console.log('Error in handle content type Change', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
   async deleteDependindOnContentType(
+    prisma: Prisma.TransactionClient,
     contentType: ContentType,
     contentId: string,
   ) {
     switch (contentType) {
       case ContentType.VIDEO:
-        await this.prismaService.videoContent.delete({
+        await prisma.videoContent.delete({
           where: { id: contentId },
         });
         break;
       case ContentType.PDF:
-        await this.prismaService.pDFContent.delete({
+        await prisma.pDFContent.delete({
           where: { id: contentId },
         });
         break;
       case ContentType.WEBLINK:
-        await this.prismaService.weblink.delete({
+        await prisma.weblink.delete({
           where: { id: contentId },
         });
         break;
     }
   }
 
-  private removeFile = (fileName: string) => {
+  private removeFile = (fileName: string | undefined) => {
     if (!fileName) return;
     const file = path.resolve('./uploads', fileName);
     if (fs.existsSync(file)) {
