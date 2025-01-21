@@ -80,7 +80,8 @@ model User {
   messagesReceived Message[]    @relation("MessageReceiver")
   notifications   Notification[]
   coursesAsTutor  Course[]
-  enrollments Enrollment[]
+  enrollmentsAsLearner Enrollment[] @relation("LeanerEnrollment")
+  enrollmentsAsTutor Enrollment[] @relation("TutorEnrollment")
   collaborationsAsLearner Collaboration[] @relation("LearnerCollaboration")
   collaborationsAsTutor Collaboration[]   @relation("TutorCollaboration")
 }
@@ -102,20 +103,22 @@ model Course {
   tutor       User          @relation(fields: [tutorId], references: [id] , onDelete: Cascade)
   modules     Module[]
   progress    Progress[]
-  enrollments Enrollment[]
+  enrollments Enrollment[] 
 }
 
 model Enrollment {
   id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
+  learnerId    Int      @map("user_id")
   courseId  Int      @map("course_id")
+  tutorId   Int      @map("tutor_id")
   enrolledAt DateTime @default(now()) @map("enrolled_at")
   status    EnrollmentStatus @default(ACTIVE)
   
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation("LeanerEnrollment",fields: [learnerId], references: [id], onDelete: Cascade)
+  tutor     User     @relation("TutorEnrollment",fields: [tutorId], references: [id], onDelete:Cascade)
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, courseId]) // Ensure a user cannot enroll in the same course multiple times
+  @@unique([learnerId, courseId]) // Ensure a user cannot enroll in the same course multiple times
 }
 
 model Module {
