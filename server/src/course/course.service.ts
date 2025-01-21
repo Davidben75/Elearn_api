@@ -1,11 +1,18 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { ContentType, CourseCreationDto, UpdateModuleDto } from './dto';
+import {
+  ContentType,
+  CourseCreationDto,
+  ModuleDto,
+  UpdateModuleDto,
+  ChangeModuleOrderDto,
+} from './dto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Prisma } from '@prisma/client';
@@ -14,6 +21,7 @@ import { Prisma } from '@prisma/client';
 export class CourseService {
   constructor(private prismaService: PrismaService) {}
 
+  // Fetch all course
   async getAllCourses() {
     try {
       return await this.prismaService.course.findMany();
@@ -23,7 +31,36 @@ export class CourseService {
     }
   }
 
-  async getByTutorId(tutorId: number) {
+  // GET ONE COURSE BY ID WITH MODULE AND CONTENT
+  async fetchCourseWithModules(
+    courseId: number,
+    prisma: PrismaService | Prisma.TransactionClient = this.prismaService,
+  ) {
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        modules: {
+          orderBy: {
+            order: 'asc',
+          },
+          include: {
+            videoContent: true,
+            pdfContent: true,
+            webLink: true,
+          },
+        },
+      },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    return this.removeNullContent(course);
+  }
+
+  // GET COURSE BY TUTOR ID
+  async getCourseByTutorId(tutorId: number) {
     try {
       return await this.prismaService.course.findMany({
         where: {
@@ -36,6 +73,7 @@ export class CourseService {
     }
   }
 
+  // CREATE A NEW COURSE
   async createNewCourse(data: CourseCreationDto, tutorId: number) {
     try {
       return await this.prismaService.$transaction(async (prisma) => {
@@ -45,68 +83,17 @@ export class CourseService {
             title: data.title,
             description: data.description,
             status: data.status,
-            tutorId: tutorId,
+            tutor: { connect: { id: tutorId } },
           },
         });
 
         // Create modules and their content
-        for (const moduleData of data.modules) {
-          const module = await prisma.module.create({
-            data: {
-              title: moduleData.title,
-              order: moduleData.order,
-              contentType: moduleData.contentType,
-              courseId: course.id,
-            },
-          });
-
-          // Create associated content based on contentType
-          switch (moduleData.contentType) {
-            case ContentType.VIDEO:
-              await prisma.videoContent.create({
-                data: {
-                  url: moduleData.url,
-                  duration: moduleData.duration ?? 0,
-                  moduleId: module.id,
-                },
-              });
-              break;
-            case ContentType.PDF:
-              await prisma.pDFContent.create({
-                data: {
-                  filePath: moduleData.filePath,
-                  originalName: moduleData.originalName,
-                  pageCount: moduleData.pageCount ?? 0,
-                  moduleId: module.id,
-                },
-              });
-              break;
-            case ContentType.WEBLINK:
-              await prisma.weblink.create({
-                data: {
-                  url: moduleData.url,
-                  moduleId: module.id,
-                },
-              });
-              break;
-          }
+        if (data.modules && data.modules.length > 0) {
+          this.createModuleAndContent(prisma, course.id, data.modules);
         }
 
         // Fetch and return the created course with all related data
-        const fetchedCourse = await prisma.course.findUnique({
-          where: { id: course.id },
-          include: {
-            modules: {
-              include: {
-                videoContent: true,
-                pdfContent: true,
-                webLink: true,
-              },
-            },
-          },
-        });
-
-        return this.removeNullContent(fetchedCourse);
+        return this.fetchCourseWithModules(course.id, prisma);
       });
     } catch (error) {
       console.error(error);
@@ -114,35 +101,85 @@ export class CourseService {
     }
   }
 
-  async checkIfCourseMatchTutorId(
+  // CREATE MODULE AND CONTENT
+  async createModuleAndContent(
+    prisma: PrismaService | Prisma.TransactionClient = this.prismaService,
     courseId: number,
-    tutorId: number,
-  ): Promise<boolean> {
+    modulesData?: ModuleDto[],
+  ) {
     try {
-      const course = await this.prismaService.course.findUnique({
-        where: { id: courseId },
-        select: { tutorId: true },
-      });
+      for (const moduleData of modulesData) {
+        const module = await prisma.module.create({
+          data: {
+            title: moduleData.title,
+            order: moduleData.order,
+            contentType: moduleData.contentType,
+            course: { connect: { id: courseId } },
+          },
+        });
 
-      if (!course) {
-        throw new NotFoundException('Course not found');
+        const moduleId = module.id;
+
+        // Create associated content based on contentType
+        switch (moduleData.contentType) {
+          case ContentType.VIDEO:
+            await prisma.videoContent.create({
+              data: {
+                url: moduleData.url,
+                duration: moduleData.duration ?? 0,
+                module: {
+                  connect: {
+                    id: moduleId,
+                  },
+                },
+              },
+            });
+            break;
+          case ContentType.PDF:
+            await prisma.pDFContent.create({
+              data: {
+                filePath: moduleData.filePath,
+                originalName: moduleData.originalName,
+                pageCount: moduleData.pageCount ?? 0,
+                module: {
+                  connect: {
+                    id: moduleId,
+                  },
+                },
+              },
+            });
+            break;
+          case ContentType.WEBLINK:
+            await prisma.weblink.create({
+              data: {
+                url: moduleData.url,
+                module: {
+                  connect: {
+                    id: moduleId,
+                  },
+                },
+              },
+            });
+            break;
+        }
       }
-
-      return course.tutorId === tutorId;
     } catch (error) {
-      console.log('ERROR in checkIfCourseMatchTutorId', error);
-      throw new Error('Unable to get the course');
+      console.log('Error in createModuleAndContent', error);
+      throw new BadRequestException('Error during creating module and content');
     }
   }
 
+  // ----------
+  // UPDATE MODULE & CONTENT
+  // ----------
   async updateModule(
     data: UpdateModuleDto,
     moduleId: number,
     tutorId: number,
     file?: Express.Multer.File,
   ) {
-    return this.prismaService.$transaction(async (prisma) => {
-      try {
+    try {
+      return this.prismaService.$transaction(async (prisma) => {
         // Verify if tutor is authorized to update
         const isAuthorized = await this.checkIfCourseMatchTutorId(
           data.courseId,
@@ -196,35 +233,19 @@ export class CourseService {
           });
 
         // Fetch and return the updated course with all related data
-        const fetchedCourse = await prisma.course.findUnique({
-          where: { id: data.courseId },
-          include: {
-            modules: {
-              orderBy: {
-                order: 'asc',
-              },
-              include: {
-                videoContent: true,
-                pdfContent: true,
-                webLink: true,
-              },
-            },
-          },
-        });
-
-        return this.removeNullContent(fetchedCourse);
-      } catch (error) {
-        console.log('ERROR in updateModule :', error);
-        if (
-          error instanceof UnauthorizedException ||
-          error instanceof NotFoundException ||
-          error instanceof BadRequestException
-        ) {
-          throw error;
-        }
-        throw new BadRequestException('Something went wrong updating Module');
+        return this.fetchCourseWithModules(data.courseId, prisma);
+      });
+    } catch (error) {
+      console.log('ERROR in updateModule :', error);
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
       }
-    });
+      throw new BadRequestException('Something went wrong updating Module');
+    }
   }
 
   async findModuleWithSpecificContent(moduleId: number, contentId: string) {
@@ -347,7 +368,7 @@ export class CourseService {
           break;
 
         case ContentType.PDF:
-          await this.removeFile(currentModuleInfo.pdfContent?.filePath);
+          // await this.removeFile(currentModuleInfo.pdfContent?.filePath);
           await prisma.pDFContent.create({
             data: {
               filePath: data.filePath,
@@ -387,7 +408,175 @@ export class CourseService {
       throw error;
     }
   }
+  // ----------
+  // END UPDATE MODULE & CONTENT
+  // ----------
 
+  async updateCourse(updateCourseDto: any, tutorId: number) {
+    try {
+      const isAuthorized = this.checkIfCourseMatchTutorId(
+        updateCourseDto.id,
+        tutorId,
+      );
+
+      if (!isAuthorized) {
+        throw new ForbiddenException(
+          'You are not allowed to perfom this action',
+        );
+      }
+
+      const currentCourse = await this.prismaService.course.findUnique({
+        where: { id: updateCourseDto.id },
+      });
+
+      if (!currentCourse) {
+        throw new NotFoundException('Course not found');
+      }
+
+      const upateData: Prisma.CourseUpdateInput = {};
+      if (updateCourseDto.title !== currentCourse.title) {
+        upateData.title = updateCourseDto.title;
+      }
+
+      if (updateCourseDto.status !== currentCourse.status) {
+        upateData.status = updateCourseDto.status;
+      }
+
+      if (updateCourseDto.description !== currentCourse.description) {
+        upateData.description = updateCourseDto.description;
+      }
+
+      if (Object.keys(upateData).length > 0) {
+        await this.prismaService.course.update({
+          where: { id: currentCourse.id },
+          data: upateData,
+        });
+      }
+
+      const fetchedCourse = await this.prismaService.course.findUnique({
+        where: { id: currentCourse.id },
+        include: {
+          modules: {
+            orderBy: {
+              order: 'asc',
+            },
+            include: {
+              videoContent: true,
+              pdfContent: true,
+              webLink: true,
+            },
+          },
+        },
+      });
+
+      return this.removeNullContent(fetchedCourse);
+    } catch (error) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      console.log();
+    }
+  }
+
+  async updateModuleOrder(data: ChangeModuleOrderDto, tutorId: number) {
+    try {
+      const isAuthorized = this.checkIfCourseMatchTutorId(
+        data.courseId,
+        tutorId,
+      );
+
+      if (!isAuthorized) {
+        throw new ForbiddenException(
+          'Your note allowed to perform this action ',
+        );
+      }
+
+      const { modules } = data;
+
+      return this.prismaService.$transaction(async (prisma) => {
+        await Promise.all(
+          modules.map((module) => {
+            prisma.module.update({
+              where: { id: module.moduleId },
+              data: { order: module.order },
+            });
+          }),
+        );
+
+        return this.fetchCourseWithModules(data.courseId, prisma);
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      throw new BadRequestException('Unable to update module');
+    }
+  }
+
+  // DELETE COURSE
+  async deleteCourse(
+    courseId: number,
+    userId?: number,
+    isAdmin: boolean = false,
+  ) {
+    try {
+      if (!isAdmin) {
+        const isAuthorized = this.checkIfCourseMatchTutorId(courseId, userId);
+
+        if (!isAuthorized) {
+          throw new ForbiddenException(
+            'You are not allowed to perform this action',
+          );
+        }
+      }
+
+      await this.prismaService.course.delete({
+        where: { id: courseId },
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+
+      throw new BadRequestException('Unable to delete your course');
+    }
+  }
+
+  // DELETE MODULE
+  async deleteModule(
+    courseId: number,
+    moduleId: number,
+    userId?: number,
+    isAdmin: boolean = false,
+  ) {
+    try {
+      if (!isAdmin) {
+        const isAuthorized = this.checkIfCourseMatchTutorId(courseId, userId);
+
+        if (!isAuthorized) {
+          throw new ForbiddenException(
+            'You are not allowed to perform this action',
+          );
+        }
+      }
+
+      await this.prismaService.module.delete({
+        where: { id: moduleId },
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+
+      throw new BadRequestException('Unable to delete your course');
+    }
+  }
+
+  // DELETE DEPENDING THE CONTENT
   async deleteDependindOnContentType(
     prisma: Prisma.TransactionClient,
     contentType: ContentType,
@@ -409,6 +598,28 @@ export class CourseService {
           where: { id: contentId },
         });
         break;
+    }
+  }
+
+  // UTILS
+  private async checkIfCourseMatchTutorId(
+    courseId: number,
+    tutorId: number,
+  ): Promise<boolean> {
+    try {
+      const course = await this.prismaService.course.findUnique({
+        where: { id: courseId },
+        select: { tutorId: true },
+      });
+
+      if (!course) {
+        throw new NotFoundException('Course not found');
+      }
+
+      return course.tutorId === tutorId;
+    } catch (error) {
+      console.log('ERROR in checkIfCourseMatchTutorId', error);
+      throw new Error('Unable to get the course');
     }
   }
 
