@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 
 @Injectable()
 export class StatusActiveGuard implements CanActivate {
@@ -6,7 +11,7 @@ export class StatusActiveGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     if (user.status == 'SUSPENDED') {
-      return false;
+      throw new ForbiddenException('Your account has been suspend');
     }
     return true;
   }
