@@ -21,7 +21,7 @@ import { Prisma } from '@prisma/client';
 export class CourseService {
   constructor(private prismaService: PrismaService) {}
 
-  // Fetch all course
+  // GET ALL COURSES
   async getAllCourses() {
     try {
       return await this.prismaService.course.findMany();
@@ -602,7 +602,7 @@ export class CourseService {
   }
 
   // UTILS
-  private async checkIfCourseMatchTutorId(
+  async checkIfCourseMatchTutorId(
     courseId: number,
     tutorId: number,
   ): Promise<boolean> {

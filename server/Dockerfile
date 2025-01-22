@@ -31,3 +31,8 @@ CMD ["npm", "run", "start:dev"]
 
 # ONCE THIS CONTAINER IS RUNNING
 # npx prisma migrate deploy
+
+# node -v
+# v18.20.5
+# npm -v
+# 10.8.2
