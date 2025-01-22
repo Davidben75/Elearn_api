@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import * as argon from 'argon2';
@@ -13,8 +14,8 @@ import { MailService } from '../mail/mail.service';
 import { ISendLearnerCredentials } from '../common/interfaces';
 import { IUserWithRole } from '../common/interfaces';
 import { CollaborationService } from '../collaboration/collaboration.service';
-import { UserStatus } from '@prisma/client';
 import { ISendMail } from 'src/common/interfaces/send-mail.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -141,7 +142,7 @@ export class UserService {
         );
       }
 
-      const newstatus = this.updateStatus(user.status);
+      const newstatus = user.status === 'INACTIVE' ? 'ACTIVE' : user.status;
 
       const hash = await argon.hash(dto.newPassword);
       const updatedUser = await this.prismaService.user.update({
@@ -186,10 +187,6 @@ export class UserService {
     }
   }
 
-  private updateStatus(currentStatus: UserStatus): UserStatus {
-    return currentStatus === 'INACTIVE' ? 'ACTIVE' : currentStatus;
-  }
-
   // Find user by email
   async findUserByMail(email: string) {
     return await this.prismaService.user.findUnique({
@@ -203,18 +200,22 @@ export class UserService {
   async updateUserInfo(id: number, dto: UpdateUserDto) {
     try {
       const currentUser = await this.findUserById(id);
-      const updatedUser: Partial<UpdateUserDto> = {};
+      if (!currentUser) {
+        throw new NotFoundException('User not found');
+      }
+      const updatedUser: Prisma.UserUpdateInput = {
+        name: dto.name,
+        lastName: dto.lastName,
+        companyName: dto.companyName,
+        email: dto.email,
+      };
 
-      Object.keys(dto).forEach((key) => {
-        if (dto[key] !== '' && dto[key] !== undefined && dto[key] !== null) {
-          updatedUser[key] = dto[key];
-        }
-      });
+      Object.keys(updatedUser).forEach(
+        (key) => updatedUser[key] === undefined && delete updatedUser[key],
+      );
 
       if (Object.keys(updatedUser).length === 0) {
-        delete currentUser.password;
-        delete currentUser.roleId;
-        return currentUser;
+        throw new BadRequestException('No valid fields to update');
       }
 
       const user = await this.prismaService.user.update({
@@ -246,6 +247,9 @@ export class UserService {
       return { user, emailSent };
     } catch (error) {
       console.error('Error in updateUserInfo:', error);
+      if (error instanceof BadRequestException || NotFoundException) {
+        throw error;
+      }
       throw new BadRequestException('Something went wrong');
     }
   }
@@ -259,39 +263,133 @@ export class UserService {
     });
   }
 
-  // Delete user by id
-  async deleteUser(id: number, user: IUserWithRole) {
+  // DELETE
+  private async deleteUserById(id: number) {
+    await this.prismaService.user.delete({
+      where: { id },
+    });
+  }
+
+  async deleteUserAccount(id: number, user: IUserWithRole) {
     try {
-      if (user.role === 'ADMIN') {
-        await this.prismaService.user.delete({
-          where: {
-            id: id,
-          },
-        });
-      } else if (user.role === 'TUTOR' || user.role === 'LEARNER') {
-        if (user.id === id) {
-          await this.prismaService.user.delete({
-            where: {
-              id: id,
-            },
-          });
-        }
-      } else {
-        throw new ForbiddenException(
-          'You are not authorized to perform this action',
-        );
+      switch (user.role) {
+        case 'LEARNER':
+          await this.learnerDeleteAccount(id, user.id);
+          break;
+        case 'TUTOR':
+          await this.tutorDeleteAccount(id, user.id);
+          break;
+        case 'ADMIN':
+          if (id === user.id) {
+            throw new ForbiddenException('Admin can not delete himself');
+          }
+          await this.deleteUserById(id);
+          break;
+        default:
+          throw new ForbiddenException('Your role is not defined');
       }
     } catch (error) {
-      console.error('Error in deleteById:', error);
-      throw new BadRequestException('Something went wrong');
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException('Unable to delete the user account');
     }
   }
 
-  // Learner delete account
+  private async learnerDeleteAccount(id: number, userId: number) {
+    if (id !== userId) {
+      throw new ForbiddenException(
+        'You are not allowed to perform this action',
+      );
+    }
+    await this.deleteUserById(id);
+  }
 
-  // Tutor delete account
+  private async tutorDeleteAccount(id: number, userId: number) {
+    const isSelfDelete = id === userId;
+    if (!isSelfDelete) {
+      const collaboration = await this.prismaService.collaboration.findFirst({
+        where: {
+          tutorId: userId,
+          learnerId: id,
+        },
+      });
+      if (!collaboration) {
+        throw new NotFoundException(
+          'User does not exist or is not associated with this tutor',
+        );
+      }
+    }
+    await this.deleteUserById(id);
+  }
 
-  // Admin delete account
+  // ADMIN SUSPEND USER
+  async suspendUser(userToSuspendId: number, user: IUserWithRole) {
+    try {
+      // Prevent self-suspension
+      if (userToSuspendId === user.id) {
+        throw new BadRequestException(
+          'Administrators cannot suspend themselves',
+        );
+      }
+
+      // Check if the user to be suspended exists
+      const userToSuspend = await this.findUserById(userToSuspendId);
+      if (!userToSuspend) {
+        throw new NotFoundException('User to suspend not found');
+      }
+
+      // Perform the suspension
+      return await this.prismaService.user.update({
+        where: { id: userToSuspendId },
+        data: { status: 'SUSPENDED' },
+      });
+    } catch (error) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+
+      throw new BadRequestException('Error suspendind user');
+    }
+  }
+
+  // ADMIN GET ALL USERS
+  async getAllUsers() {
+    try {
+      const users = await this.prismaService.user.findMany({
+        where: {
+          role: {
+            id: {
+              in: [2, 3],
+            },
+          },
+        },
+        select: {
+          name: true,
+          lastName: true,
+          email: true,
+          role: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      console.log(users);
+      return users;
+    } catch (error) {
+      console.log('ERROR in getAllUsers', error);
+      throw new BadRequestException('Errror fetching users');
+    }
+  }
 
   // Generate password
   async generatePassword(): Promise<string> {

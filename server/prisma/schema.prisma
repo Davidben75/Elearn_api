@@ -114,7 +114,7 @@ model Enrollment {
   enrolledAt DateTime @default(now()) @map("enrolled_at")
   status    EnrollmentStatus @default(ACTIVE)
   
-  user      User     @relation("LeanerEnrollment",fields: [learnerId], references: [id], onDelete: Cascade)
+  learner      User     @relation("LeanerEnrollment",fields: [learnerId], references: [id], onDelete: Cascade)
   tutor     User     @relation("TutorEnrollment",fields: [tutorId], references: [id], onDelete:Cascade)
   course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 

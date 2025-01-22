@@ -21,6 +21,7 @@ import { successResponse } from '../utils';
 import { IUserWithRole } from '../common/interfaces';
 import { Roles } from '../common/decorators';
 import { GetUser } from '../common/decorators';
+import { TutorIdGuard } from 'src/common/guard/tutor-id.guard';
 
 @UseGuards(JwtAuthGuard, RoleGuard, StatusActiveGuard)
 @Controller('user')
@@ -33,11 +34,12 @@ export class UserController {
 
   // Add new learner only for tutor
   @Roles('tutor')
+  @UseGuards(TutorIdGuard)
   @Post('tutor/add-learner')
   @HttpCode(201)
   async addNewLearner(
     @Body() learnerRegisterDto: LearnerRegisterDto,
-    @Req() req,
+    @Req() req: any,
   ) {
     const tutor = req.user;
     console.log(tutor);
@@ -75,7 +77,7 @@ export class UserController {
   // Update password
   @Put('update-password')
   @HttpCode(200)
-  async updatePassword(@Body() dto: UpdatePasswordDto, @Req() req) {
+  async updatePassword(@Body() dto: UpdatePasswordDto, @Req() req: any) {
     const user = req.user as IUserWithRole;
     try {
       const updatedUser = await this.userService.updatePassword(dto, user.id);
@@ -87,7 +89,7 @@ export class UserController {
 
   @Patch('update-info')
   @HttpCode(200)
-  async updateInfo(@Body() dto: UpdateUserDto, @Req() req) {
+  async updateInfo(@Body() dto: UpdateUserDto, @Req() req: any) {
     const userId = req.user.id;
     try {
       const updatedUser = await this.userService.updateUserInfo(userId, dto);
@@ -99,16 +101,44 @@ export class UserController {
 
   @Delete('delete/:id')
   @HttpCode(200)
-  async delete(@Req() req, @Param('id') id: number) {
+  async delete(@Req() req: any, @Param('id') id: number) {
     const user = req.user;
     try {
-      const deletedUser = await this.userService.deleteUser(id, user);
+      const deletedUser = await this.userService.deleteUserAccount(id, user);
       return successResponse(deletedUser, 'User deleted successfully', 200);
     } catch (error) {
       throw new BadRequestException(error.message);
     }
   }
+
   // -------------
   // ADMIN ACTIONS
   // -------------
+  @Patch('suspended/:id')
+  @HttpCode(200)
+  @Roles('admin')
+  async adminSuspendUser(@Req() req: any, @Param('id') id: number) {
+    try {
+      const admin = req.user;
+      const userSuspended = await this.userService.suspendUser(id, admin);
+      delete userSuspended.password;
+      delete userSuspended.roleId;
+      return successResponse(userSuspended, 'User suspend successfully', 200);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Get('all')
+  @HttpCode(200)
+  @Roles('admin')
+  async adminGetAllUsers() {
+    try {
+      const users = await this.userService.getAllUsers();
+      console.log('CONTROLLER', users);
+      return successResponse(users, 'Success', 200);
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
+  }
 }
