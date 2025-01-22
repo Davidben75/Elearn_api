@@ -327,26 +327,40 @@ export class UserService {
   }
 
   // ADMIN SUSPEND USER
-  async suspendUser(userToSuspendId: number, user: IUserWithRole) {
+  async toggleUserSuspension(userToToggleId: number, admin: IUserWithRole) {
     try {
       // Prevent self-suspension
-      if (userToSuspendId === user.id) {
+
+      if (userToToggleId === admin.id) {
         throw new BadRequestException(
-          'Administrators cannot suspend themselves',
+          'Administrators cannot suspend/unsuspend themselves',
         );
       }
 
-      // Check if the user to be suspended exists
-      const userToSuspend = await this.findUserById(userToSuspendId);
-      if (!userToSuspend) {
-        throw new NotFoundException('User to suspend not found');
+      const userToToggle = await this.findUserById(userToToggleId);
+      if (!userToToggle) {
+        throw new NotFoundException('User not found');
       }
 
-      // Perform the suspension
-      return await this.prismaService.user.update({
-        where: { id: userToSuspendId },
-        data: { status: 'SUSPENDED' },
+      // Determine the new status
+      const newStatus =
+        userToToggle.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+
+      // Perform the status toggle
+      const user = await this.prismaService.user.update({
+        where: { id: userToToggleId },
+        data: { status: newStatus },
+        select: {
+          id: true,
+          name: true,
+          lastName: true,
+          email: true,
+          status: true,
+        },
       });
+
+      const message = `User ${newStatus === 'ACTIVE' ? 'unsuspended' : 'suspended'} successfully`;
+      return { user, message };
     } catch (error) {
       if (
         error instanceof ForbiddenException ||
@@ -356,7 +370,7 @@ export class UserService {
         throw error;
       }
 
-      throw new BadRequestException('Error suspendind user');
+      throw new BadRequestException('Error toggling user suspension status');
     }
   }
 
@@ -375,6 +389,7 @@ export class UserService {
           name: true,
           lastName: true,
           email: true,
+          status: true,
           role: {
             select: {
               name: true,

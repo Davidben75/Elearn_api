@@ -120,10 +120,12 @@ export class UserController {
   async adminSuspendUser(@Req() req: any, @Param('id') id: number) {
     try {
       const admin = req.user;
-      const userSuspended = await this.userService.suspendUser(id, admin);
-      delete userSuspended.password;
-      delete userSuspended.roleId;
-      return successResponse(userSuspended, 'User suspend successfully', 200);
+      const userSuspended = await this.userService.toggleUserSuspension(
+        id,
+        admin,
+      );
+      const { user, message } = userSuspended;
+      return successResponse(user, message, 200);
     } catch (error) {
       throw new BadRequestException(error.message);
     }
