@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { LoginDto, PayloadDto, RegisterDto } from './dto';
 import { User } from '@prisma/client';
@@ -39,6 +43,10 @@ export class AuthService {
       const passwordMatches = await argon.verify(user.password, dto.password);
       if (!passwordMatches) {
         throw new ForbiddenException('Credentials incorrect');
+      }
+
+      if (user.status === 'SUSPENDED') {
+        throw new UnauthorizedException('Your account has been suspended');
       }
 
       return this.signToken(user);
