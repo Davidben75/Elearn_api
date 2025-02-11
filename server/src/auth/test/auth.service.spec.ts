@@ -13,7 +13,7 @@ describe('AuthService - login', () => {
   let authService: AuthService;
   let userService: UserService;
 
-  const mockPrismaService = {}; // Mock minimal pour PrismaService
+  const mockPrismaService = {}; // Mock of prismaService
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,7 +22,7 @@ describe('AuthService - login', () => {
         {
           provide: UserService,
           useValue: {
-            findUserByMail: jest.fn(), // Mock de la méthode findUserByMail
+            findUserByMail: jest.fn(),
           },
         },
         {
@@ -42,7 +42,7 @@ describe('AuthService - login', () => {
           },
         },
         {
-          provide: PrismaService, // Fournir PrismaService comme dépendance mockée
+          provide: PrismaService,
           useValue: mockPrismaService,
         },
       ],
@@ -53,7 +53,7 @@ describe('AuthService - login', () => {
   });
 
   it('should throw ForbiddenException if user does not exist', async () => {
-    // Mock findUserByMail pour retourner null (utilisateur non trouvé)
+    // Mock findUserByMail should return null (no user found)
     jest.spyOn(userService, 'findUserByMail').mockResolvedValue(null);
 
     const dto = { email: 'test@example.com', password: 'password123' };
@@ -79,10 +79,10 @@ describe('AuthService - login', () => {
       updatedAt: new Date(),
     };
 
-    // Mock findUserByMail pour retourner un utilisateur
+    // Mock findUserByMail should return a user
     jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
 
-    // Mock argon.verify pour retourner false (mot de passe incorrect)
+    // Mock argon.verify should return false (wrong password)
     jest.spyOn(argon, 'verify').mockResolvedValue(false);
 
     const dto = { email: 'test@example.com', password: 'wrongPassword' };
@@ -108,10 +108,9 @@ describe('AuthService - login', () => {
       updatedAt: new Date(),
     };
 
-    // Mock findUserByMail pour retourner un utilisateur
     jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
 
-    // Mock argon.verify pour retourner true (mot de passe correct)
+    // Mock argon.verify return true (password match)
     jest.spyOn(argon, 'verify').mockResolvedValue(true);
 
     const dto = { email: 'test@example.com', password: 'password123' };
@@ -137,13 +136,12 @@ describe('AuthService - login', () => {
       updatedAt: new Date(),
     };
 
-    // Mock findUserByMail pour retourner un utilisateur
     jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
 
     // Mock argon.verify pour retourner true (mot de passe correct)
     jest.spyOn(argon, 'verify').mockResolvedValue(true);
 
-    // Mock signToken pour retourner un token fictif
+    // Mock result
     const mockTokenAndUser = {
       token: 'token123',
       user: {
@@ -158,13 +156,10 @@ describe('AuthService - login', () => {
 
     const dto = { email: 'test@example.com', password: 'password123' };
 
-    // Appel de la méthode login
     const result = await authService.login(dto);
 
-    // Vérifiez que findUserByMail a été appelé
     expect(userService.findUserByMail).toHaveBeenCalledWith(dto.email);
 
-    // Vérifiez que le résultat contient une clé `access_token`
     expect(result).toHaveProperty('token');
   });
 });
