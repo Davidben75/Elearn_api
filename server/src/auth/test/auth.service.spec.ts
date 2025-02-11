@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '../../mail/mail.service';
 import { PrismaService } from '../../database/prisma.service';
+import { UserStatus } from '@prisma/client';
 
 describe('AuthService - login', () => {
   let authService: AuthService;
@@ -63,10 +64,23 @@ describe('AuthService - login', () => {
   });
 
   it('should throw ForbiddenException if password is incorrect', async () => {
+    const hashedPassword = await argon.hash('password123');
+
+    const mockUser = {
+      id: 1,
+      name: 'Jhon',
+      lastName: 'Doe',
+      email: 'test@example.com',
+      password: hashedPassword,
+      status: UserStatus.ACTIVE,
+      companyName: 'Test Company',
+      roleId: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
     // Mock findUserByMail pour retourner un utilisateur
-    jest
-      .spyOn(userService, 'findUserByMail')
-      .mockResolvedValue({ password: 'hashedPassword' } as any);
+    jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
 
     // Mock argon.verify pour retourner false (mot de passe incorrect)
     jest.spyOn(argon, 'verify').mockResolvedValue(false);
@@ -79,9 +93,23 @@ describe('AuthService - login', () => {
   });
 
   it('should throw UnauthorizedException if user account is suspended', async () => {
-    jest
-      .spyOn(userService, 'findUserByMail')
-      .mockResolvedValue({ status: 'SUSPENDED' } as any);
+    const hashedPassword = await argon.hash('password123');
+
+    const mockUser = {
+      id: 1,
+      name: 'Jhon',
+      lastName: 'Doe',
+      email: 'test@example.com',
+      password: hashedPassword,
+      status: UserStatus.SUSPENDED,
+      companyName: 'Test Company',
+      roleId: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Mock findUserByMail pour retourner un utilisateur
+    jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
 
     // Mock argon.verify pour retourner true (mot de passe correct)
     jest.spyOn(argon, 'verify').mockResolvedValue(true);
@@ -94,20 +122,41 @@ describe('AuthService - login', () => {
   });
 
   it('should return a signed token if credentials are valid', async () => {
-    // Mock findUserByMail pour retourner un utilisateur valide
+    const hashedPassword = await argon.hash('password123');
 
-    jest
-      .spyOn(userService, 'findUserByMail')
-      .mockResolvedValue({ email: 'hello@world.com' } as any);
+    const mockUser = {
+      id: 1,
+      name: 'Jhon',
+      lastName: 'Doe',
+      email: 'test@example.com',
+      password: hashedPassword,
+      status: UserStatus.ACTIVE,
+      companyName: 'Test Company',
+      roleId: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Mock findUserByMail pour retourner un utilisateur
+    jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
 
     // Mock argon.verify pour retourner true (mot de passe correct)
     jest.spyOn(argon, 'verify').mockResolvedValue(true);
 
     // Mock signToken pour retourner un token fictif
-    const mockToken = { token: 'fake-jwt-token' };
-    jest.spyOn(authService, 'signToken').mockResolvedValue(mockToken as any);
+    const mockTokenAndUser = {
+      token: 'token123',
+      user: {
+        name: 'Jhon',
+        lastName: 'Doe',
+        email: 'test@example.com',
+        companyName: 'Test Company',
+        role: 'admin',
+      },
+    };
+    jest.spyOn(authService, 'signToken').mockResolvedValue(mockTokenAndUser);
 
-    const dto = { email: 'hello@world.com', password: '123456789' };
+    const dto = { email: 'test@example.com', password: 'password123' };
 
     // Appel de la méthode login
     const result = await authService.login(dto);
