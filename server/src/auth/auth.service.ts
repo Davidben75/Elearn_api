@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { LoginDto, PayloadDto, RegisterDto } from './dto';
 import { User } from '@prisma/client';
@@ -37,12 +33,12 @@ export class AuthService {
       const user = await this.userService.findUserByMail(dto.email);
 
       if (!user) {
-        throw new ForbiddenException('Credentials incorrect');
+        throw new UnauthorizedException('Credentials incorrect');
       }
 
       const passwordMatches = await argon.verify(user.password, dto.password);
       if (!passwordMatches) {
-        throw new ForbiddenException('Credentials incorrect');
+        throw new UnauthorizedException('Credentials incorrect');
       }
 
       if (user.status === 'SUSPENDED') {
@@ -55,11 +51,21 @@ export class AuthService {
     }
   }
 
-  async signToken(user: User): Promise<{ access_token: string }> {
+  getRolename(roleId: number): string {
+    switch (roleId) {
+      case 1:
+        return 'ADMIN';
+      case 2:
+        return 'TUTOR';
+      default:
+        return 'LEARNER';
+    }
+  }
+
+  async signToken(user: User) {
     const payload: PayloadDto = {
       sub: user.id,
       email: user.email,
-      roleId: user.roleId,
       status: user.status,
       companyName: user.companyName,
     };
@@ -68,7 +74,14 @@ export class AuthService {
       secret: this.config.get('JWT_SECRET'),
     });
     return {
-      access_token: token,
+      token,
+      user: {
+        name: user.name,
+        lastName: user.lastName,
+        email: user.email,
+        companyName: user.companyName,
+        role: this.getRolename(user.roleId),
+      },
     };
   }
 }
