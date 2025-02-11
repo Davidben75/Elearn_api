@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import * as argon from 'argon2';
 import { AuthService } from '../auth.service';
 import { UserService } from '../../user/user.service';
@@ -52,18 +52,18 @@ describe('AuthService - login', () => {
     userService = module.get<UserService>(UserService);
   });
 
-  it('should throw ForbiddenException if user does not exist', async () => {
+  it('should throw UnauthorizedException if user does not exist', async () => {
     // Mock findUserByMail should return null (no user found)
     jest.spyOn(userService, 'findUserByMail').mockResolvedValue(null);
 
     const dto = { email: 'test@example.com', password: 'password123' };
 
     await expect(authService.login(dto)).rejects.toThrow(
-      new ForbiddenException('Credentials incorrect'),
+      new UnauthorizedException('Credentials incorrect'),
     );
   });
 
-  it('should throw ForbiddenException if password is incorrect', async () => {
+  it('should throw UnauthorizedException if password is incorrect', async () => {
     const hashedPassword = await argon.hash('password123');
 
     const mockUser = {
@@ -88,7 +88,7 @@ describe('AuthService - login', () => {
     const dto = { email: 'test@example.com', password: 'wrongPassword' };
 
     await expect(authService.login(dto)).rejects.toThrow(
-      new ForbiddenException('Credentials incorrect'),
+      new UnauthorizedException('Credentials incorrect'),
     );
   });
 
@@ -120,7 +120,7 @@ describe('AuthService - login', () => {
     );
   });
 
-  it('should return a signed token if credentials are valid', async () => {
+  it('should return a signed token and user if credentials are valid', async () => {
     const hashedPassword = await argon.hash('password123');
 
     const mockUser = {
