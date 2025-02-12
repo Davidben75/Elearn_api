@@ -1,51 +1,46 @@
-@startuml "Course creation"
+@startuml "Course Creation and Module Addition"
 
 actor Tutor
 participant "Course Controller" as CourseController
-participant "Auth Guard" as AuthGuard
+participant "Guards" as Guards
 participant "Course Service" as CourseService
 participant "Database" as Database
-participant "Email Service" as EmailService
-participant "User Service" as UserService
 
-Tutor -> CourseController: Request to create course
-CourseController -> AuthGuard: Validate JWT and permissions
+== Course Creation ==
+Tutor -> CourseController: Request to create course (title, description)
+CourseController -> Guards: Validate JWT and permissions
 
 alt Session validated
-    AuthGuard --> CourseController: Session and role validated
-    CourseController -> CourseService: Create course with details (PDF, video link, web page link, text)
+    Guards --> CourseController: Session and role validated
+    CourseController -> CourseService: Create course with basic details
 
-    CourseService -> Database: Save course details
-    alt Course saved successfully
-        Database --> CourseService: Course saved
+    CourseService -> Database: Save course basic details
+    Database --> CourseService: Course saved
 
-        CourseService -> UserService: Get list of collaborators for tutor
-        UserService -> Database: Fetch collaborators based on tutor ID
-        Database --> UserService: Collaborators list
-        UserService --> CourseService: Return collaborators list
-
-        CourseService -> Database: Assign collaborators to course
-        Database --> CourseService: Collaborators assigned
-
-        CourseService -> EmailService: Send email to all collaborators
-        alt Email sent successfully
-            EmailService --> CourseService: Email sent successfully
-        else Email failed
-            EmailService --> CourseService: Email sending failed
-            CourseService --> CourseController: Notify Tutor about email failure
-        end
-
-        CourseService --> CourseController: Course created successfully
-        CourseController --> Tutor: Notify course created and collaborators notified
-    else Course save failed
-        Database --> CourseService: Error saving course
-        CourseService --> CourseController: Notify Tutor about course creation failure
-        CourseController --> Tutor: Course creation failed
-    end
+    CourseService --> CourseController: Course created successfully
+    CourseController --> Tutor: Notify course created and redirect to editing
 
 else Session not validated
-    AuthGuard --> CourseController: Session not validated
+    Guards --> CourseController: Session not validated
     CourseController --> Tutor: Notify session not validated
+end
+
+== Module Addition ==
+loop Add modules one by one
+    Tutor -> CourseController: Request to add module (details, content)
+    CourseController -> Guards: Validate JWT and permissions
+
+    alt Session validated
+        Guards --> CourseController: Session and role validated
+        CourseController -> CourseService: Add module to course
+        CourseService -> Database: Save module details
+        Database --> CourseService: Module saved
+        CourseService --> CourseController: Module added successfully
+        CourseController --> Tutor: Confirm module added
+    else Session not validated
+        Guards --> CourseController: Session not validated
+        CourseController --> Tutor: Notify session not validated for module addition
+    end
 end
 
 @enduml

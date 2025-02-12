@@ -1,0 +1,43 @@
+@startuml "Socket.io"
+actor Learner
+actor Tutor
+participant "WebSocket Gateway" as Gateway
+participant "Auth Service" as AuthService
+participant "Room Management Service" as RoomService
+participant "Message Service" as MessageService
+database "Database" as DB
+
+== Connection ==
+Learner -> Gateway: Connect with JWT
+Gateway -> AuthService: Validate JWT
+AuthService --> Gateway: JWT is valid
+Gateway -> RoomService: Assign to private room
+RoomService --> Gateway: Room assigned
+
+== Sending a Message ==
+Learner -> Gateway: Send message ("Hello")
+Gateway -> MessageService: Save message
+MessageService -> DB: Insert message (sender, recipient, content, timestamp)
+DB --> MessageService: Save confirmation
+MessageService -> RoomService: Forward to tutor's private room
+RoomService -> Gateway: Message forwarded to tutor
+Gateway --> Tutor: Receive message ("Hello")
+
+== Tutor's Reply ==
+Tutor -> Gateway: Reply ("Hi")
+Gateway -> MessageService: Save reply
+MessageService -> DB: Insert reply (sender, recipient, content, timestamp)
+DB --> MessageService: Save confirmation
+MessageService -> RoomService: Forward to learner's private room
+RoomService -> Gateway: Reply forwarded to learner
+Gateway --> Learner: Receive reply ("Hi")
+
+== Retrieving Chat History ==
+Learner -> Gateway: Request chat history
+Gateway -> MessageService: Fetch history for this user
+MessageService -> DB: Save message
+DB --> MessageService: Return list of messages
+MessageService --> Gateway: Send chat history back to user
+Gateway --> Learner: Deliver chat history
+
+@enduml

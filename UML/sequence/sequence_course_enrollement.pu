@@ -1,0 +1,37 @@
+@startuml "Learner Enrollment with Email Notification"
+actor Tutor
+participant "Enrollment Controller" as EnrollmentController
+participant "Guards" as Guards
+participant "Enrollment Service" as EnrollmentService
+participant "Database" as Database
+participant "Mail Service" as MailService
+
+== Learner Enrollment ==
+Tutor -> EnrollmentController: Request to enroll learners in course
+EnrollmentController -> Guards: Validate session and permission
+
+alt Session validated
+    Guards --> EnrollmentController: Session validated
+
+    EnrollmentController -> EnrollmentService: Enroll learners in course
+    EnrollmentService -> Database: Save learner enrollment details
+    Database --> EnrollmentService: Learners enrolled successfully
+
+    EnrollmentService -> MailService: Send enrollment email to learners
+    alt Email sent successfully
+        MailService --> EnrollmentService: Email sent confirmation
+        EnrollmentService --> EnrollmentController: Enrollment complete with email notification
+        EnrollmentController --> Tutor: Notify enrollment success and email sent
+    else Email sending failed
+        MailService --> EnrollmentService: Email sending failed
+        EnrollmentService --> EnrollmentController: Notify enrollment complete but email failed
+        EnrollmentController --> Tutor: Notify enrollment success but email failed
+    end
+
+else Session not validated
+    Guards --> EnrollmentController: Session not validated
+    EnrollmentController --> Tutor: Notify session not validated
+
+end
+
+@enduml

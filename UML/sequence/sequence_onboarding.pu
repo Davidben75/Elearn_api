@@ -1,55 +1,66 @@
-@startuml "Sequence onboarding"
+@startuml "Sequence onboarding with Collaboration Service"
 
 actor Tutor
-actor Learner
 participant "User Controller" as UserController
-participant "Auth Guard" as AuthGuard
+participant "Guards" as Guards
 participant "User Service" as UserService
+participant "Collaboration Service" as CollaborationService
 participant "Database" as Database
-participant "Email Service" as EmailService
-participant "Auth Service" as AuthService
+participant "MailService" as MailService
 
-Tutor -> UserController: Request to add collaborator
-UserController -> AuthGuard: Validate JWT and permissions
+Tutor -> UserController: Request to add learner (name, lastname, email)
+UserController -> Guards: Validate JWT and permissions
 
 alt Session validated
-    AuthGuard --> UserController: Session and permissions validated
-    UserController -> UserService: Check if email is already used
-    UserService -> Database: Query for email
+    Guards --> UserController: Session and permissions validated
+    UserController -> UserService: Add learner (name, lastname, email, tutor_id)
+
+    UserService -> Database: Check if email is already used
     Database --> UserService: Email status
 
-    alt Email already used
-        UserService -> Database: Verify collaboration for email and tutor_id
-        Database --> UserService: Collaboration status
+    alt Email not used
+        UserService -> Database: Create user with role "Learner" and generate temporary password
+        Database --> UserService: User created successfully (user_id, temporary password)
 
-        alt Collaboration exists
-            UserService --> UserController: Notify email already in use
-            UserController --> Tutor: Email already used
-        else Collaboration does not exist
-            UserService -> Database: Add new collaboration
-            Database --> UserService: Collaboration saved
-            UserService --> UserController: Collaboration added successfully
-            UserController --> Tutor: Collaboration added
-        end
-    else Email not used
-        UserController -> UserService: Add learner with email
-        UserService -> Database: Save learner details
-        Database --> UserService: Learner saved
+        alt User created successfully
+            UserService -> CollaborationService: Create new collaboration (tutor_id, user_id)
+            CollaborationService -> Database: Save collaboration details
+            Database --> CollaborationService: Collaboration status
 
-        UserService -> EmailService: Send email with temporary credentials
-        alt Email sent successfully
-            EmailService --> UserService: Email sent successfully
-            UserService --> UserController: Notify Tutor of successful onboarding
-            UserController --> Tutor: Learner added and email sent
-        else Email failed
-            EmailService --> UserService: Email sending failed
-            UserService --> UserController: Notify Tutor about email failure
-            UserController --> Tutor: Email sending failed
+            alt Collaboration saved successfully
+                CollaborationService --> UserService: Collaboration added successfully
+                UserService -> MailService: Send email with temporary credentials (email, temporary password)
+                alt Email sent successfully
+                    MailService --> UserService: Email sent successfully
+                    UserService --> UserController: Learner added and email sent successfully
+                    UserController --> Tutor: Learner added and email sent successfully
+                else Email failed to send
+                    MailService --> UserService: Email sending failed
+                    UserService --> UserController: Learner added but email sending failed
+                    UserController --> Tutor: Learner added but email sending failed
+                end
+
+            else Collaboration save failed
+                CollaborationService --> UserService: Failed to create collaboration
+                UserService -> Database: Delete user (user_id)
+                Database --> UserService: User deleted successfully
+                UserService --> UserController: Failed to create collaboration, user creation reverted
+                UserController --> Tutor: Failed to add learner, process reverted
+            end
+
+        else User creation failed
+            UserService --> UserController: Failed to create learner in database
+            UserController --> Tutor: Failed to add learner, no user created.
         end
+
+    else Email already used
+        UserService --> UserController: Email already in use, cannot add learner.
+        UserController --> Tutor: Email already in use, cannot add learner.
     end
+
 else Session not validated
-    AuthGuard --> UserController: Session not validated
-    UserController --> Tutor: Notify session not validated
+    Guards --> UserController: Session not validated or permissions denied.
+    UserController --> Tutor: Notify session not validated.
 end
 
 @enduml
