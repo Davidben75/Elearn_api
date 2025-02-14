@@ -57,7 +57,7 @@ export class UserService {
 
   // Create a new user with role Learner
   async createLearner(data: LearnerRegisterDto, tutor: IUserWithRole) {
-    const temporaryPassword = await this.generatePassword();
+    const temporaryPassword = this.generatePassword();
     const hash = await argon.hash(temporaryPassword);
     data.password = hash;
 
@@ -415,13 +415,14 @@ export class UserService {
   }
 
   // Generate password
-  async generatePassword(): Promise<string> {
-    return await generate({
-      length: 10,
+  generatePassword(): string {
+    return generate({
+      length: 12,
       numbers: true,
       uppercase: true,
       lowercase: true,
-      symbols: true,
+      strict: true,
+      symbols: '!@#$%^&*()',
     });
   }
 }
