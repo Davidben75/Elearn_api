@@ -11,7 +11,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { generate } from 'generate-password-ts';
 import { LearnerRegisterDto, UpdatePasswordDto, UpdateUserDto } from './dto';
 import { MailService } from '../mail/mail.service';
-import { ISendLearnerCredentials } from '../common/interfaces';
+import { ICollaboration, ISendLearnerCredentials } from '../common/interfaces';
 import { IUserWithRole } from '../common/interfaces';
 import { CollaborationService } from '../collaboration/collaboration.service';
 import { ISendMail } from 'src/common/interfaces/send-mail.interface';
@@ -62,24 +62,41 @@ export class UserService {
     data.password = hash;
 
     try {
-      const user = await this.prismaService.user.create({
-        data: {
-          name: data.name,
-          lastName: data.lastName,
-          email: data.email,
-          password: data.password,
-          companyName: tutor.companyName,
-          roleId: 3,
-          status: 'INACTIVE',
-        },
+      const result = await this.prismaService.$transaction(async (prisma) => {
+        // New user creation
+        const user = await prisma.user.create({
+          data: {
+            name: data.name,
+            lastName: data.lastName,
+            email: data.email,
+            password: data.password,
+            companyName: tutor.companyName,
+            roleId: 3,
+            status: 'INACTIVE',
+          },
+        });
+
+        const collaborationInfo: ICollaboration = {
+          learnerId: user.id,
+          tutorId: tutor.id,
+          status: 'ACTIVE',
+        };
+
+        // Add new collaboration
+        await this.collaborationService.addNewCollaboration(
+          collaborationInfo,
+          prisma,
+        );
+
+        return user;
       });
 
-      delete user.password;
-      console.log('User created:', user);
+      delete result.password;
+      console.log('User created:', result);
 
       let emailSent = false;
 
-      // Sent email to learner
+      // Sent email with temporary password
       try {
         const mailInfo: ISendLearnerCredentials = {
           name: data.name,
@@ -95,19 +112,10 @@ export class UserService {
         emailSent = true;
       } catch (emailError) {
         console.error('Error sending email:', emailError);
-        // Email sending failed, but we'll continue without throwing an error
       }
 
-      // Add new collaboration
-      await this.collaborationService.addNewCollaboration({
-        learnerId: user.id,
-        tutorId: tutor.id,
-      });
-
       return {
-        user,
-        // Only for testing
-        //temporaryPassword,
+        user: result,
         emailSent,
       };
     } catch (error) {

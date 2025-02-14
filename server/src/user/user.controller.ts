@@ -21,7 +21,6 @@ import { successResponse } from '../utils';
 import { IUserWithRole } from '../common/interfaces';
 import { Roles } from '../common/decorators';
 import { GetUser } from '../common/decorators';
-import { TutorIdGuard } from 'src/common/guard/tutor-id.guard';
 
 @UseGuards(JwtAuthGuard, RoleGuard, StatusActiveGuard)
 @Controller('user')
@@ -34,7 +33,7 @@ export class UserController {
 
   // Add new learner only for tutor
   @Roles('tutor')
-  @UseGuards(TutorIdGuard)
+  @UseGuards(RoleGuard)
   @Post('tutor/add-learner')
   @HttpCode(201)
   async addNewLearner(
