@@ -4,33 +4,31 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ICollaboration, IUserWithRole } from 'src/common/interfaces';
+import { ICollaboration, IUserWithRole } from '../common/interfaces';
 import { PrismaService } from '../database/prisma.service';
 import { CollaborationDto } from './dto/collaboration.dto';
-import { formatDateToLocal } from 'src/utils';
+import { formatDateToLocal } from '../utils';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CollaborationService {
   constructor(private prismaService: PrismaService) {}
 
-  async addNewCollaboration(collaboration: ICollaboration) {
+  async addNewCollaboration(
+    collaboration: ICollaboration,
+    prisma: PrismaService | Prisma.TransactionClient = this.prismaService,
+  ) {
     try {
       if (
         collaboration.learnerId !== collaboration.tutorId &&
         collaboration.learnerId !== null &&
         collaboration.tutorId !== null
       ) {
+        console.log(collaboration);
         const learnerId = collaboration.learnerId;
         const tutorId = collaboration.tutorId;
-        // Check if collaboration already exists
-        const collaborationExists = await this.findCollaboration(
-          learnerId,
-          tutorId,
-        );
-        if (collaborationExists) {
-          throw new ConflictException('Collaboration already exists');
-        }
-        await this.prismaService.collaboration.create({
+
+        await prisma.collaboration.create({
           data: {
             learnerId: learnerId,
             tutorId: tutorId,
@@ -48,9 +46,13 @@ export class CollaborationService {
     }
   }
 
-  async findCollaboration(learnerId: number, tutorId: number) {
+  async findCollaboration(
+    learnerId: number,
+    tutorId: number,
+    prisma: PrismaService | Prisma.TransactionClient = this.prismaService,
+  ) {
     try {
-      return await this.prismaService.collaboration.findFirst({
+      return await prisma.collaboration.findFirst({
         where: {
           AND: [
             {
@@ -68,50 +70,29 @@ export class CollaborationService {
     }
   }
 
-  async getCollaborationByTutorId(
-    tutorId: number,
-    user: IUserWithRole,
-  ): Promise<CollaborationDto[]> {
+  async getCollaborationByTutorId(tutorId: number) {
     try {
       const collaborations = await this.prismaService.collaboration.findMany({
         where: {
           tutorId: tutorId,
         },
-        include: {
-          learner: true,
-          tutor: true,
+        select: {
+          learner: {
+            select: {
+              id: true,
+              name: true,
+              lastName: true,
+              status: true,
+            },
+          },
         },
       });
-      if (user.role === 'ADMIN') {
-        return collaborations.map((collaboration) => ({
-          id: collaboration.id,
-          learnerId: collaboration.learnerId,
-          tutorId: collaboration.tutorId,
-          status: collaboration.status,
-          createdAt: formatDateToLocal(collaboration.createdAt),
-          learnerName: collaboration.learner.name,
-          learnerLastName: collaboration.learner.lastName,
-          learnerEmail: collaboration.learner.email,
-        }));
-      } else if (user.role === 'TUTOR') {
-        return collaborations.map((collaboration) => ({
-          id: collaboration.id,
-          learnerId: collaboration.learnerId,
-          tutorId: collaboration.tutorId,
-          status: collaboration.status,
-          createdAt: formatDateToLocal(collaboration.createdAt),
-          learnerName: collaboration.learner.name,
-          learnerLastName: collaboration.learner.lastName,
-          learnerEmail: collaboration.learner.email,
-          tutorEmail: collaboration.tutor.email,
-          tutorName: collaboration.tutor.name,
-          tutorLastName: collaboration.tutor.lastName,
-        }));
-      } else {
-        throw new UnauthorizedException(
-          'You are not authorized to perform this action',
-        );
-      }
+
+      const learners = collaborations.map(
+        (collaboration) => collaboration.learner,
+      );
+
+      return learners;
     } catch (error) {
       console.error('Error finding collaboration:', error);
       throw new Error('Unable to find collaboration');

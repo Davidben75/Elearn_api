@@ -28,7 +28,6 @@ export class MailService {
   }
 
   async sendLearnerCredentials(dto: ISendLearnerCredentials) {
-    console.log('Received DTO in MailService:', JSON.stringify(dto, null, 2));
     try {
       const loginUrl = `http://localhost:3000/auth/login`;
       console.log('Preparing to send email to:', dto.email);
@@ -49,8 +48,8 @@ export class MailService {
       });
       console.log('Email sent successfully');
     } catch (error) {
-      console.error('Detailed error in sendLearnerCredentials:', error);
-      throw new Error(`Error sending learner credentials email ; ${error}`);
+      console.error('Detailed error in  sendLearnerCredentials :', error);
+      throw new Error(`Failed to send email to ${dto.email}`);
     }
   }
 

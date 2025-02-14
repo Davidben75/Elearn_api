@@ -1,5 +1,5 @@
 # Use Node.js 18 as the base image
-FROM node:18-slim
+FROM node:22-slim
 
 # Set working directory
 WORKDIR /usr/src/app

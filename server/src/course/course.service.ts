@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -12,14 +14,20 @@ import {
   ModuleDto,
   UpdateModuleDto,
   ChangeModuleOrderDto,
+  UpdateCourseDto,
 } from './dto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Prisma } from '@prisma/client';
+import { CourseStatus, Prisma } from '@prisma/client';
+import { EnrollmentService } from 'src/enrollment/enrollment.service';
 
 @Injectable()
 export class CourseService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    @Inject(forwardRef(() => EnrollmentService))
+    private enrollmentService: EnrollmentService,
+  ) {}
 
   // GET ALL COURSES
   async getAllCourses() {
@@ -55,46 +63,53 @@ export class CourseService {
     if (!course) {
       throw new NotFoundException('Course not found');
     }
-
+    console.log(this.removeNullContent(course));
     return this.removeNullContent(course);
   }
 
   // GET COURSE BY TUTOR ID
   async getCourseByTutorId(tutorId: number) {
     try {
-      return await this.prismaService.course.findMany({
+      const courses = await this.prismaService.course.findMany({
         where: {
           tutorId: tutorId,
         },
+        orderBy: {
+          id: 'asc',
+        },
       });
+
+      return courses;
     } catch (error) {
       console.log(error);
-      throw new Error('Unable to get all courses');
+      throw new Error('Unable to fetch tutor courses');
+    }
+  }
+
+  async getLearnerCourses(leanerId: number) {
+    try {
+      return await this.enrollmentService.getLearnerEnrolledCourses(leanerId);
+    } catch (error) {
+      console.log(error);
+      throw new Error('Unable to fetch learner courses');
     }
   }
 
   // CREATE A NEW COURSE
   async createNewCourse(data: CourseCreationDto, tutorId: number) {
     try {
-      return await this.prismaService.$transaction(async (prisma) => {
-        // Create the course
-        const course = await prisma.course.create({
-          data: {
-            title: data.title,
-            description: data.description,
-            status: data.status,
-            tutor: { connect: { id: tutorId } },
-          },
-        });
-
-        // Create modules and their content
-        if (data.modules && data.modules.length > 0) {
-          this.createModuleAndContent(prisma, course.id, data.modules);
-        }
-
-        // Fetch and return the created course with all related data
-        return this.fetchCourseWithModules(course.id, prisma);
+      // Create the course
+      const course = await this.prismaService.course.create({
+        data: {
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          tutor: { connect: { id: tutorId } },
+        },
       });
+
+      // Fetch and return the created course with all related data
+      return this.fetchCourseWithModules(course.id);
     } catch (error) {
       console.error(error);
       throw new Error('Unable to create new course');
@@ -103,12 +118,20 @@ export class CourseService {
 
   // CREATE MODULE AND CONTENT
   async createModuleAndContent(
-    prisma: PrismaService | Prisma.TransactionClient = this.prismaService,
     courseId: number,
-    modulesData?: ModuleDto[],
+    tutorId: number,
+    moduleData: ModuleDto,
   ) {
-    try {
-      for (const moduleData of modulesData) {
+    return this.prismaService.$transaction(async (prisma) => {
+      try {
+        const isAuthorized = this.checkIfCourseMatchTutorId(courseId, tutorId);
+
+        if (!isAuthorized) {
+          throw new ForbiddenException(
+            'You are not allowed to perform this action',
+          );
+        }
+
         const module = await prisma.module.create({
           data: {
             title: moduleData.title,
@@ -127,11 +150,7 @@ export class CourseService {
               data: {
                 url: moduleData.url,
                 duration: moduleData.duration ?? 0,
-                module: {
-                  connect: {
-                    id: moduleId,
-                  },
-                },
+                module: { connect: { id: moduleId } },
               },
             });
             break;
@@ -141,11 +160,7 @@ export class CourseService {
                 filePath: moduleData.filePath,
                 originalName: moduleData.originalName,
                 pageCount: moduleData.pageCount ?? 0,
-                module: {
-                  connect: {
-                    id: moduleId,
-                  },
-                },
+                module: { connect: { id: moduleId } },
               },
             });
             break;
@@ -153,20 +168,22 @@ export class CourseService {
             await prisma.weblink.create({
               data: {
                 url: moduleData.url,
-                module: {
-                  connect: {
-                    id: moduleId,
-                  },
-                },
+                module: { connect: { id: moduleId } },
               },
             });
             break;
         }
+
+        const course = await this.fetchCourseWithModules(courseId, prisma);
+
+        return course;
+      } catch (error) {
+        console.error('Error in createModuleAndContent', error);
+        throw new BadRequestException(
+          'Error during creating module and content',
+        );
       }
-    } catch (error) {
-      console.log('Error in createModuleAndContent', error);
-      throw new BadRequestException('Error during creating module and content');
-    }
+    });
   }
 
   // ----------
@@ -204,13 +221,7 @@ export class CourseService {
         }
 
         // Update the content
-        await this.updateContent(
-          prisma,
-          currentModuleInfo,
-          data,
-          contentId,
-          file,
-        );
+        await this.updateContent(prisma, currentModuleInfo, data, file);
 
         const updateModuleData: Prisma.ModuleUpdateInput = {};
         if (data.title && data.title !== currentModuleInfo.title) {
@@ -275,7 +286,6 @@ export class CourseService {
     prisma: Prisma.TransactionClient,
     currentModuleInfo: any,
     data: UpdateModuleDto,
-    contentId: string,
     file?: Express.Multer.File,
   ): Promise<void> {
     try {
@@ -412,7 +422,7 @@ export class CourseService {
   // END UPDATE MODULE & CONTENT
   // ----------
 
-  async updateCourse(updateCourseDto: any, tutorId: number) {
+  async updateCourse(updateCourseDto: UpdateCourseDto, tutorId: number) {
     try {
       const isAuthorized = this.checkIfCourseMatchTutorId(
         updateCourseDto.id,
@@ -439,7 +449,7 @@ export class CourseService {
       }
 
       if (updateCourseDto.status !== currentCourse.status) {
-        upateData.status = updateCourseDto.status;
+        upateData.status = updateCourseDto.status as CourseStatus;
       }
 
       if (updateCourseDto.description !== currentCourse.description) {
@@ -453,23 +463,7 @@ export class CourseService {
         });
       }
 
-      const fetchedCourse = await this.prismaService.course.findUnique({
-        where: { id: currentCourse.id },
-        include: {
-          modules: {
-            orderBy: {
-              order: 'asc',
-            },
-            include: {
-              videoContent: true,
-              pdfContent: true,
-              webLink: true,
-            },
-          },
-        },
-      });
-
-      return this.removeNullContent(fetchedCourse);
+      return this.fetchCourseWithModules(updateCourseDto.id);
     } catch (error) {
       if (
         error instanceof ForbiddenException ||
@@ -547,32 +541,64 @@ export class CourseService {
   }
 
   // DELETE MODULE
-  async deleteModule(
-    courseId: number,
-    moduleId: number,
-    userId?: number,
-    isAdmin: boolean = false,
-  ) {
+  async deleteModule(moduleId: number, tutorId: number) {
     try {
-      if (!isAdmin) {
-        const isAuthorized = this.checkIfCourseMatchTutorId(courseId, userId);
+      const courseId = await this.prismaService.$transaction(async (prisma) => {
+        const moduleToDelete = await prisma.module.findUnique({
+          where: { id: moduleId },
+          include: {
+            pdfContent: true,
+          },
+        });
 
+        if (!moduleToDelete) {
+          throw new NotFoundException('Module not found');
+        }
+
+        const { courseId } = moduleToDelete;
+
+        const isAuthorized = this.checkIfCourseMatchTutorId(courseId, tutorId);
         if (!isAuthorized) {
           throw new ForbiddenException(
             'You are not allowed to perform this action',
           );
         }
-      }
 
-      await this.prismaService.module.delete({
-        where: { id: moduleId },
+        // Remove PDF first
+        if (moduleToDelete.contentType === ContentType.PDF) {
+          this.removeFile(moduleToDelete.pdfContent?.filePath);
+        }
+
+        await prisma.module.delete({
+          where: { id: moduleId },
+        });
+
+        const remainingModules = await prisma.module.findMany({
+          where: { courseId },
+          orderBy: { order: 'asc' },
+        });
+
+        await Promise.all(
+          remainingModules.map((module, index) =>
+            prisma.module.update({
+              where: { id: module.id },
+              data: { order: index + 1 },
+            }),
+          ),
+        );
+
+        return courseId;
       });
+
+      return this.fetchCourseWithModules(courseId);
     } catch (error) {
-      if (error instanceof ForbiddenException) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
-
-      throw new BadRequestException('Unable to delete your course');
+      throw new BadRequestException('Unable to delete the module');
     }
   }
 
@@ -605,11 +631,11 @@ export class CourseService {
   async checkIfCourseMatchTutorId(
     courseId: number,
     tutorId: number,
+    prisma: PrismaService | Prisma.TransactionClient = this.prismaService,
   ): Promise<boolean> {
     try {
-      const course = await this.prismaService.course.findUnique({
-        where: { id: courseId },
-        select: { tutorId: true },
+      const course = await prisma.course.findFirst({
+        where: { AND: [{ id: courseId }, { tutorId: tutorId }] },
       });
 
       if (!course) {
@@ -636,16 +662,16 @@ export class CourseService {
   };
 
   private removeNullContent(course) {
-    course.modules.map((module) => {
-      if (!module.videoContent) {
-        delete module.videoContent;
-      }
-      if (!module.pdfContent) {
-        delete module.pdfContent;
-      }
-      if (!module.webLink) {
-        delete module.webLink;
-      }
+    course.modules = course.modules.map((module) => {
+      let hasContent = false;
+      ['videoContent', 'pdfContent', 'webLink'].forEach((contentType) => {
+        if (module[contentType]) {
+          hasContent = true;
+        } else {
+          delete module[contentType];
+        }
+      });
+      module.isEmpty = !hasContent;
       return module;
     });
 

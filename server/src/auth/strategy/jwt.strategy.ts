@@ -39,7 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     return UserWithRole;
   }
 
-  private getRolename(roleId: number): string {
+  getRolename(roleId: number): string {
     switch (roleId) {
       case 1:
         return 'ADMIN';

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Param,
   Patch,
   Req,
   UseGuards,
@@ -11,7 +12,6 @@ import { CollaborationService } from './collaboration.service';
 import { successResponse } from 'src/utils';
 import { JwtAuthGuard, RoleGuard, StatusActiveGuard } from 'src/common/guard';
 import { GetUser, Roles } from 'src/common/decorators';
-import { TutorIdGuard } from 'src/common/guard/tutor-id.guard';
 
 @UseGuards(JwtAuthGuard, RoleGuard, StatusActiveGuard)
 @Controller('collaboration')
@@ -20,23 +20,20 @@ export class CollaborationController {
 
   // GET TUTOR COLLABORATIONS LIST
   @Roles('tutor')
-  @UseGuards(TutorIdGuard)
+  @UseGuards(RoleGuard)
   @Get('tutor')
-  async getCollaborationByTutor(@GetUser() user, @Req() req) {
+  async getLearnersByTutorId(@Req() req) {
+    const tutorId = req.user.id;
     try {
-      const tutorId = req.tutorId;
-      const collaborations =
-        await this.collaborationService.getCollaborationByTutorId(
-          tutorId,
-          user,
-        );
+      const users =
+        await this.collaborationService.getCollaborationByTutorId(tutorId);
 
-      if (collaborations.length === 0) {
+      if (users.length === 0) {
         return successResponse([], 'No collaboration records found', 200);
       }
 
       return successResponse(
-        collaborations,
+        { users },
         'Collaborations found successfully',
         200,
       );
@@ -65,7 +62,8 @@ export class CollaborationController {
 
   //   DELELETE COLLABORATION
   @Delete('delete/:collaborationId')
-  @Roles('admin, tutor')
+  @UseGuards(RoleGuard)
+  @Roles('tutor')
   async deleteCollaboration(collaborationId: number, @GetUser() user) {
     try {
       const deletedCollaboration =
@@ -106,11 +104,12 @@ export class CollaborationController {
 
   //   GET COLLABORATION BY TUTOR ID
   @Roles('admin')
+  @UseGuards(RoleGuard)
   @Get('tutor/:id')
-  async getCollaborationById(id: number, @GetUser() user) {
+  async getCollaborationById(@Param('id') id: number) {
     try {
       const collaboration =
-        await this.collaborationService.getCollaborationByTutorId(id, user);
+        await this.collaborationService.getCollaborationByTutorId(id);
       return successResponse(
         collaboration,
         'Collaboration found successfully',

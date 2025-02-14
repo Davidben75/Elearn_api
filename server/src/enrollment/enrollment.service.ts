@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,6 +14,7 @@ import { EnrollmentDto } from './dto/enrollment.dto';
 export class EnrollmentService {
   constructor(
     private prismaService: PrismaService,
+    @Inject(forwardRef(() => CourseService))
     private courseService: CourseService,
   ) {}
 
@@ -73,10 +76,39 @@ export class EnrollmentService {
     }
   }
 
-  async fetchEnrollmentListByTutorId(tutorId: number) {
+  async getLearnerEnrolledCourses(leanerId: number) {
+    try {
+      const learnerCourse = await this.prismaService.enrollment.findMany({
+        where: {
+          learnerId: leanerId,
+        },
+        select: {
+          course: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              tutor: {
+                select: {
+                  name: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      return learnerCourse;
+    } catch (error) {
+      console.log(error);
+      throw new Error('Unable to fetch learner course');
+    }
+  }
+
+  async fetchEnrollmentListByCourse(courseId: number) {
     try {
       const enrollementInfo = await this.prismaService.enrollment.findMany({
-        where: { tutorId: tutorId },
+        where: { courseId: courseId },
       });
 
       if (!enrollementInfo) {
@@ -110,5 +142,49 @@ export class EnrollmentService {
         },
       },
     });
+  }
+
+  async getAssignableLearners(tutorId: number, courseId: number) {
+    try {
+      const isAuthorized = this.courseService.checkIfCourseMatchTutorId(
+        courseId,
+        tutorId,
+      );
+
+      if (!isAuthorized) {
+        throw new ForbiddenException(
+          'You are not allowed to perform this action',
+        );
+      }
+
+      return await this.prismaService.user.findMany({
+        where: {
+          AND: [
+            {
+              collaborationsAsLearner: {
+                some: {
+                  tutorId,
+                },
+              },
+            },
+            {
+              enrollmentsAsLearner: {
+                none: { courseId },
+              },
+            },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          lastName: true,
+          email: true,
+        },
+      });
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+    }
   }
 }

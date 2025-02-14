@@ -33,8 +33,9 @@ export class AuthController {
   @HttpCode(200)
   async login(@Body() loginDto: LoginDto) {
     try {
-      const token = await this.authService.login(loginDto);
-      return successResponse(token, 'Login successful', 200);
+      const response = await this.authService.login(loginDto);
+
+      return successResponse(response, 'Login successful', 200);
     } catch (error) {
       throw new BadRequestException(error.message);
     }
