@@ -8,7 +8,6 @@ import {
   Param,
   Patch,
   Post,
-  Put,
   Req,
   UnauthorizedException,
   UseGuards,
@@ -67,19 +66,23 @@ export class UserController {
       if (!user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      return successResponse(user, 'User found successfully', 200);
+      return successResponse({ user }, 'User found successfully', 200);
     } catch (error) {
       throw new BadRequestException(error.message);
     }
   }
 
   // Update password
-  @Put('update-password')
+  @Patch('update-password')
   @HttpCode(200)
   async updatePassword(@Body() dto: UpdatePasswordDto, @Req() req: any) {
     const user = req.user as IUserWithRole;
     try {
-      const updatedUser = await this.userService.updatePassword(dto, user.id);
+      const updatedUser = await this.userService.updatePassword(
+        dto,
+        user.id,
+        user.status === 'INACTIVE',
+      );
       return successResponse(updatedUser, 'Password updated successfully', 200);
     } catch (error) {
       throw new BadRequestException(error.message);

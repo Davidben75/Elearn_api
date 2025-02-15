@@ -17,8 +17,9 @@ export class AuthController {
   @HttpCode(201)
   async register(@Body() registerDto: RegisterDto) {
     try {
-      const newUser = await this.authService.register(registerDto);
-      return successResponse(newUser, 'User created successfully', 201);
+      // Tutor account
+      const user = await this.authService.register(registerDto);
+      return successResponse({ user }, 'User created successfully', 201);
     } catch (error) {
       console.log('error AUTH', error);
       if (error instanceof BadRequestException) {

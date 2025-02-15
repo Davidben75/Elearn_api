@@ -19,11 +19,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: PayloadDto): Promise<IUserWithRole | null> {
+  async validate(payload: PayloadDto): Promise<IUserWithRole> {
     const user = await this.prismaService.findUserActiveByID(payload.sub);
 
     if (!user) {
-      return null;
+      throw new Error('User not found');
     }
 
     const UserWithRole: IUserWithRole = {
@@ -31,22 +31,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       name: user.name,
       lastname: user.lastName,
       email: user.email,
-      status: user.status,
-      companyName: user.companyName,
-      role: this.getRolename(user.roleId),
+      status: payload.status,
+      companyName: payload.companyName,
+      role: payload.role,
       createdAt: user.createdAt,
     };
     return UserWithRole;
-  }
-
-  getRolename(roleId: number): string {
-    switch (roleId) {
-      case 1:
-        return 'ADMIN';
-      case 2:
-        return 'TUTOR';
-      default:
-        return 'LEARNER';
-    }
   }
 }

@@ -28,7 +28,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
-import { console } from 'inspector';
 
 @UseGuards(JwtAuthGuard, StatusActiveGuard)
 @Controller('course')
@@ -327,7 +326,6 @@ export class CourseController {
   async getCourseById(@Param('id') courseId: number) {
     try {
       const course = await this.courseService.fetchCourseWithModules(courseId);
-      console.log('UNIQUE COURSE ', course);
       return successResponse({ course }, 'Succes fetching course', 200);
     } catch (error) {
       if (error instanceof BadRequestException) {

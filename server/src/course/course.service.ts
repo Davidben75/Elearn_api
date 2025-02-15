@@ -63,7 +63,6 @@ export class CourseService {
     if (!course) {
       throw new NotFoundException('Course not found');
     }
-    console.log(this.removeNullContent(course));
     return this.removeNullContent(course);
   }
 
@@ -471,8 +470,6 @@ export class CourseService {
       ) {
         throw error;
       }
-
-      console.log();
     }
   }
 

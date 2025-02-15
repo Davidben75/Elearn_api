@@ -81,6 +81,7 @@ export class CollaborationService {
             select: {
               id: true,
               name: true,
+              email: true,
               lastName: true,
               status: true,
             },

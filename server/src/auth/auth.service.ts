@@ -1,36 +1,71 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { LoginDto, PayloadDto, RegisterDto } from './dto';
 import { User } from '@prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserService } from '../user/user.service';
 import { MailService } from '../mail/mail.service';
 import * as argon from 'argon2';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prismaService: PrismaService,
-    private userService: UserService,
     private jwt: JwtService,
     private config: ConfigService,
     private mailService: MailService,
   ) {}
 
+  // Create a new user with role Tutor
   async register(dto: RegisterDto) {
-    const newTutor = await this.userService.createTutor(dto);
     try {
-      await this.mailService.sendUserConfirmation(dto);
+      const hash = await argon.hash(dto.password);
+      dto.password = hash;
+      const user = await this.prismaService.user.create({
+        data: {
+          name: dto.name,
+          lastName: dto.lastName,
+          email: dto.email,
+          password: dto.password,
+          companyName: dto.companyName,
+          roleId: 2,
+          status: 'ACTIVE',
+        },
+      });
+      delete user.password;
+      let emailSent = false;
+      try {
+        await this.mailService.sendUserConfirmation(dto);
+        emailSent = true;
+      } catch (error) {
+        console.error('Failed to send confirmation email:', error);
+      }
+
+      return { user, emailSent };
     } catch (error) {
-      console.error('Failed to send confirmation email:', error);
+      console.log('error USER SERVICE' + error);
+      if (error instanceof PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ForbiddenException('Email already in use');
+        }
+        throw Error('Unable to register the new user');
+      }
+      throw error;
     }
-    return newTutor;
   }
 
   async login(dto: LoginDto) {
     try {
-      const user = await this.userService.findUserByMail(dto.email);
+      const user = await this.prismaService.user.findUnique({
+        where: {
+          email: dto.email,
+        },
+      });
 
       if (!user) {
         throw new UnauthorizedException('Credentials incorrect');
@@ -68,6 +103,7 @@ export class AuthService {
       email: user.email,
       status: user.status,
       companyName: user.companyName,
+      role: this.getRolename(user.roleId),
     };
     const token = await this.jwt.signAsync(payload, {
       expiresIn: '12h',

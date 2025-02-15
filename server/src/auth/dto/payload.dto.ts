@@ -3,4 +3,5 @@ export interface PayloadDto {
   email: string;
   status: string;
   companyName: string;
+  role: string;
 }

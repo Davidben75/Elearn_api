@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import * as argon from 'argon2';
-import { RegisterDto } from '../auth/dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { generate } from 'generate-password-ts';
 import { LearnerRegisterDto, UpdatePasswordDto, UpdateUserDto } from './dto';
@@ -16,6 +15,7 @@ import { IUserWithRole } from '../common/interfaces';
 import { CollaborationService } from '../collaboration/collaboration.service';
 import { ISendMail } from 'src/common/interfaces/send-mail.interface';
 import { Prisma } from '@prisma/client';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class UserService {
@@ -23,37 +23,8 @@ export class UserService {
     private prismaService: PrismaService,
     private mailService: MailService,
     private collaborationService: CollaborationService,
+    private authService: AuthService,
   ) {}
-
-  // Create a new user with role Tutor
-  async createTutor(dto: RegisterDto) {
-    try {
-      const hash = await argon.hash(dto.password);
-      dto.password = hash;
-      const user = await this.prismaService.user.create({
-        data: {
-          name: dto.name,
-          lastName: dto.lastName,
-          email: dto.email,
-          password: dto.password,
-          companyName: dto.companyName,
-          roleId: 2,
-          status: 'ACTIVE',
-        },
-      });
-      delete user.password;
-      return user;
-    } catch (error) {
-      console.log('error USER SERVICE' + error);
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ForbiddenException('Email already in use');
-        }
-        throw Error('Unable to register the new user');
-      }
-      throw error;
-    }
-  }
 
   // Create a new user with role Learner
   async createLearner(data: LearnerRegisterDto, tutor: IUserWithRole) {
@@ -131,42 +102,47 @@ export class UserService {
   }
 
   // Change password
-  async updatePassword(dto: UpdatePasswordDto, id: number) {
+  async updatePassword(
+    dto: UpdatePasswordDto,
+    id: number,
+    isFirstLogin = false,
+  ) {
     try {
       const user = await this.findUserById(id);
 
-      const passwordMatches = await argon.verify(
-        user.password,
-        dto.oldPassword,
-      );
+      // Check if the old password matches
+      if (!isFirstLogin) {
+        if (!dto.oldPassword) {
+          throw new BadRequestException('Old password is required');
+        }
 
-      if (!passwordMatches) {
-        throw new ForbiddenException('Old password is incorrect');
-      }
+        if (dto.newPassword === dto.oldPassword) {
+          throw new BadRequestException(
+            'New password cannot be the same as the old password',
+          );
+        }
 
-      if (dto.newPassword === dto.oldPassword) {
-        throw new BadRequestException(
-          'New password cannot be the same as the old password',
+        const passwordMatches = await argon.verify(
+          user.password,
+          dto.oldPassword,
         );
+        if (!passwordMatches) {
+          throw new ForbiddenException('Old password is incorrect');
+        }
       }
-
-      const newstatus = user.status === 'INACTIVE' ? 'ACTIVE' : user.status;
 
       const hash = await argon.hash(dto.newPassword);
+      const newStatus = user.status === 'INACTIVE' ? 'ACTIVE' : user.status;
+
       const updatedUser = await this.prismaService.user.update({
-        where: {
-          id: user.id,
-        },
+        where: { id: user.id },
         data: {
           password: hash,
-          status: newstatus,
+          status: newStatus,
         },
       });
 
-      delete updatedUser.password;
-      delete user.roleId;
-
-      // Send when password has been updated
+      // Envoi d'un email de notification
       let emailSent = false;
       try {
         const emailData: ISendMail = {
@@ -182,9 +158,25 @@ export class UserService {
       } catch (emailError) {
         console.log(emailError);
       }
-      return { updatedUser, emailSent };
+
+      const userToreturn = {
+        name: updatedUser.name,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        status: updatedUser.status,
+        role: this.authService.getRolename(updatedUser.roleId),
+      };
+
+      const response = isFirstLogin
+        ? await this.authService.signToken(updatedUser)
+        : userToreturn;
+      console.log(response);
+      return { ...response, emailSent };
     } catch (error) {
-      if (error instanceof ForbiddenException) {
+      if (
+        error instanceof ForbiddenException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
 
