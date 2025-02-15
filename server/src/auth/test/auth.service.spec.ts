@@ -2,59 +2,56 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import * as argon from 'argon2';
 import { AuthService } from '../auth.service';
-import { UserService } from '../../user/user.service';
+import { PrismaService } from '../../database/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { MailService } from '../../mail/mail.service';
-import { PrismaService } from '../../database/prisma.service';
+import { MailService } from '../../mail/mail.service'; // Ajouter MailService
 import { UserStatus } from '@prisma/client';
 
 describe('AuthService - login', () => {
   let authService: AuthService;
-  let userService: UserService;
-
-  const mockPrismaService = {}; // Mock of prismaService
+  let prismaService: PrismaService;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let jwtService: JwtService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         {
-          provide: UserService,
+          provide: PrismaService,
           useValue: {
-            findUserByMail: jest.fn(),
+            user: {
+              findUnique: jest.fn(),
+            },
           },
         },
         {
           provide: JwtService,
           useValue: {
-            signAsync: jest.fn(),
+            signAsync: jest.fn().mockResolvedValue('token123'), // Simulation du retour du token
           },
         },
         {
           provide: ConfigService,
-          useValue: {},
-        },
-        {
-          provide: MailService,
           useValue: {
-            sendUserConfirmation: jest.fn(),
+            get: jest.fn().mockReturnValue('mocked_jwt_secret'),
           },
         },
         {
-          provide: PrismaService,
-          useValue: mockPrismaService,
+          provide: MailService,
+          useValue: { sendUserConfirmation: jest.fn() },
         },
       ],
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    userService = module.get<UserService>(UserService);
+    prismaService = module.get<PrismaService>(PrismaService);
+    jwtService = module.get<JwtService>(JwtService);
   });
 
   it('should throw UnauthorizedException if user does not exist', async () => {
-    // Mock findUserByMail should return null (no user found)
-    jest.spyOn(userService, 'findUserByMail').mockResolvedValue(null);
+    jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(null);
 
     const dto = { email: 'test@example.com', password: 'password123' };
 
@@ -79,10 +76,7 @@ describe('AuthService - login', () => {
       updatedAt: new Date(),
     };
 
-    // Mock findUserByMail should return a user
-    jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
-
-    // Mock argon.verify should return false (wrong password)
+    jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser);
     jest.spyOn(argon, 'verify').mockResolvedValue(false);
 
     const dto = { email: 'test@example.com', password: 'wrongPassword' };
@@ -108,9 +102,7 @@ describe('AuthService - login', () => {
       updatedAt: new Date(),
     };
 
-    jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
-
-    // Mock argon.verify return true (password match)
+    jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser);
     jest.spyOn(argon, 'verify').mockResolvedValue(true);
 
     const dto = { email: 'test@example.com', password: 'password123' };
@@ -136,30 +128,28 @@ describe('AuthService - login', () => {
       updatedAt: new Date(),
     };
 
-    jest.spyOn(userService, 'findUserByMail').mockResolvedValue(mockUser);
-
-    // Mock argon.verify pour retourner true (mot de passe correct)
+    jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser);
     jest.spyOn(argon, 'verify').mockResolvedValue(true);
+    jest.spyOn(authService, 'getRolename').mockReturnValue('ADMIN');
 
-    // Mock result
-    const mockTokenAndUser = {
+    const dto = { email: 'test@example.com', password: 'password123' };
+
+    const result = await authService.login(dto);
+
+    expect(prismaService.user.findUnique).toHaveBeenCalledWith({
+      where: { email: dto.email },
+    });
+
+    expect(result).toEqual({
       token: 'token123',
       user: {
         name: 'Jhon',
         lastName: 'Doe',
         email: 'test@example.com',
         companyName: 'Test Company',
-        role: 'admin',
+        role: 'ADMIN',
+        status: UserStatus.ACTIVE,
       },
-    };
-    jest.spyOn(authService, 'signToken').mockResolvedValue(mockTokenAndUser);
-
-    const dto = { email: 'test@example.com', password: 'password123' };
-
-    const result = await authService.login(dto);
-
-    expect(userService.findUserByMail).toHaveBeenCalledWith(dto.email);
-
-    expect(result).toHaveProperty('token');
+    });
   });
 });

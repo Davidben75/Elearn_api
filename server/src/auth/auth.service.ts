@@ -116,6 +116,7 @@ export class AuthService {
         lastName: user.lastName,
         email: user.email,
         companyName: user.companyName,
+        status: user.status,
         role: this.getRolename(user.roleId),
       },
     };
