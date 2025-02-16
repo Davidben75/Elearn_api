@@ -170,7 +170,6 @@ export class UserService {
       const response = isFirstLogin
         ? await this.authService.signToken(updatedUser)
         : userToreturn;
-      console.log(response);
       return { ...response, emailSent };
     } catch (error) {
       if (

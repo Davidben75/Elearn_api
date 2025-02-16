@@ -40,18 +40,47 @@ export class EnrollmentController {
     }
   }
 
-  @Post('create')
+  @Post('add-learners')
   @UseGuards(RoleGuard)
   @Roles('tutor')
-  async createEnrollments(@Body() enrollmentDto: EnrollmentDto, @Req() req) {
+  async enrollLearnersToCourse(
+    @Body() enrollmentDto: EnrollmentDto,
+    @Req() req,
+  ) {
     const tutorId = req.user.id;
     try {
-      const list = await this.enrollmentService.addEnrollment(
+      const result = await this.enrollmentService.enrollLearners(
         enrollmentDto,
         tutorId,
       );
 
-      successResponse(list, 'Succes', 200);
+      return successResponse(null, result.message, 200);
+    } catch (error) {
+      console.log('ERROR IN findListEnrollment', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Something went wrong fetching enrollment list ',
+      );
+    }
+  }
+
+  @Get('unenrolled-learners/:courseId')
+  @UseGuards(RoleGuard)
+  @Roles('tutor')
+  async getUnenrolledLearnersList(
+    @Req() req,
+    @Param('courseId') courseId: number,
+  ) {
+    const tutorId = req.user.id;
+    try {
+      const users = await this.enrollmentService.getUnenrolledLearners(
+        tutorId,
+        courseId,
+      );
+
+      return successResponse({ users }, 'Succes', 200);
     } catch (error) {
       console.log('ERROR IN findListEnrollment', error);
       throw new BadRequestException(
@@ -60,21 +89,21 @@ export class EnrollmentController {
     }
   }
 
-  @Get('assignable-learner/:courseId')
+  @Get('enrolled-learners/:courseId')
   @UseGuards(RoleGuard)
   @Roles('tutor')
-  async getAssignableLearnersList(
+  async getEnrolledLearnersList(
     @Req() req,
     @Param('courseId') courseId: number,
   ) {
     const tutorId = req.user.id;
     try {
-      const list = await this.enrollmentService.getAssignableLearners(
+      const users = await this.enrollmentService.getEnrolledLearners(
         tutorId,
         courseId,
       );
 
-      successResponse(list, 'Succes', 200);
+      return successResponse({ users }, 'Succes', 200);
     } catch (error) {
       console.log('ERROR IN findListEnrollment', error);
       throw new BadRequestException(

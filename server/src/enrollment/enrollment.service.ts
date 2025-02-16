@@ -19,36 +19,39 @@ export class EnrollmentService {
   ) {}
 
   // Add course enrollement
-  async addEnrollment(data: EnrollmentDto, tutorId: number) {
+  async enrollLearners(data: EnrollmentDto, tutorId: number) {
     try {
-      const isAuthorized = this.courseService.checkIfCourseMatchTutorId(
+      const isAuthorized = await this.courseService.checkIfCourseMatchTutorId(
         data.courseId,
         tutorId,
       );
 
       if (!isAuthorized) {
-        throw new ForbiddenException('Your not allowed to perform this action');
+        throw new ForbiddenException(
+          'You are not allowed to perform this action',
+        );
       }
 
       const { learners } = data;
 
-      return await this.prismaService.$transaction(async (prisma) => {
-        await Promise.all(
-          learners.map((learner) => {
-            prisma.enrollment.create({
-              data: {
-                learner: { connect: { id: learner.learnerId } },
-                tutor: { connect: { id: tutorId } },
-                course: { connect: { id: data.courseId } },
-              },
-            });
-          }),
-        );
+      // Bulk insert enrollments, skipping duplicates
+      const result = await this.prismaService.enrollment.createMany({
+        data: learners.map((learner) => ({
+          learnerId: learner.learnerId,
+          tutorId: tutorId,
+          courseId: data.courseId,
+        })),
+        skipDuplicates: true, // Ignores existing enrollments instead of throwing an error
       });
+
+      return {
+        message: `${result.count} learners enrolled successfully`,
+      };
     } catch (error) {
-      if (error instanceof ForbiddenException) {
-        throw error;
-      }
+      console.error(error);
+      throw new BadRequestException(
+        'Something went wrong while enrolling learners',
+      );
     }
   }
 
@@ -144,7 +147,7 @@ export class EnrollmentService {
     });
   }
 
-  async getAssignableLearners(tutorId: number, courseId: number) {
+  async getUnenrolledLearners(tutorId: number, courseId: number) {
     try {
       const isAuthorized = this.courseService.checkIfCourseMatchTutorId(
         courseId,
@@ -157,7 +160,7 @@ export class EnrollmentService {
         );
       }
 
-      return await this.prismaService.user.findMany({
+      const users = await this.prismaService.user.findMany({
         where: {
           AND: [
             {
@@ -181,6 +184,48 @@ export class EnrollmentService {
           email: true,
         },
       });
+
+      return users;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+    }
+  }
+
+  async getEnrolledLearners(tutorId: number, courseId: number) {
+    try {
+      const isAuthorized = this.courseService.checkIfCourseMatchTutorId(
+        courseId,
+        tutorId,
+      );
+
+      if (!isAuthorized) {
+        throw new ForbiddenException(
+          'You are not allowed to perform this action',
+        );
+      }
+
+      const users = await this.prismaService.enrollment.findMany({
+        where: {
+          courseId: courseId,
+        },
+        select: {
+          id: true,
+          status: true,
+          enrolledAt: true,
+          learner: {
+            select: {
+              id: true,
+              name: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return users;
     } catch (error) {
       if (error instanceof ForbiddenException) {
         throw error;
