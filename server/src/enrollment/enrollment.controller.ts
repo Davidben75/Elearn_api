@@ -130,4 +130,21 @@ export class EnrollmentController {
       );
     }
   }
+
+  @Get('learner-courses')
+  @UseGuards(RoleGuard)
+  @Roles('learner')
+  async getLearnerCourseBaseOnEnrollment(@Req() req) {
+    const learnerId = req.user.id;
+    try {
+      const courses =
+        await this.enrollmentService.getLearnerEnrolledCourses(learnerId);
+      return successResponse({ courses }, 'Succes', 200);
+    } catch (error) {
+      console.log('ERROR IN findListEnrollment', error);
+      throw new BadRequestException(
+        'Something went wrong fetching learner course',
+      );
+    }
+  }
 }

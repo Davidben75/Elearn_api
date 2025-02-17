@@ -11,6 +11,7 @@ entity User {
   +company_name: VARCHAR(255)
   +role_id: INTEGER <<FK>>
   +created_at: TIMESTAMP
+  +updated_at: TIMESTAMP
 }
 
 entity Role {
@@ -37,21 +38,22 @@ entity Module {
 }
 
 entity VideoContent {
-  +id: SERIAL <<PK>>
+  +id: UUID <<PK>>
   +module_id : INTEGER <<FK>>
   +url: VARCHAR(255)
   +duration: INTEGER
 }
 
 entity PDFContent {
-  +id: SERIAL <<PK>>
+  +id: UUID <<PK>>
   +module_id : INTEGER <<FK>>
   +file_path: VARCHAR(255)
+  original_name :VARCHAR(255)
   +page_count: INTEGER
 }
 
 entity WebLink {
-  +id: SERIAL <<PK>>
+  +id: UUID <<PK>>
   +module_id : INTEGER <<FK>>
   +description: TEXT
   +url: VARCHAR(255)
@@ -89,7 +91,16 @@ entity Progress {
   +course_id: INTEGER <<FK>>
   +module_id: INTEGER <<FK>>
   +completion_status: CompletionStatus
-  +last_accessed_at: TIMESTAMP 
+  +last_accessed_at: TIMESTAMP
+}
+
+entity Enrollment {
+  +id: SERIAL <<PK>>
+  +learner_id: INTEGER <<FK>>
+  +course_id: INTEGER <<FK>>
+  +tutor_id: INTEGER <<FK>>
+  +enrolled_at: TIMESTAMP
+  +status: EnrollmentStatus
 }
 
 enum UserStatus {
@@ -131,6 +142,11 @@ enum CompletionStatus {
   NOT_STARTED
 }
 
+enum EnrollmentStatus {
+  ACTIVE
+  DROPPED
+}
+
 User ||--o{ Progress : "A user tracks progress in multiple courses"
 Course ||--o{ Progress : "A course has progress tracked by multiple users"
 Module ||--o{ Progress : "Progress is tracked per module"
@@ -141,7 +157,8 @@ User ||--o{ Message : "1" receives "many"
 User ||--o{ Notification : "1" notifies "many"
 User ||--o{ Course : "1 teaches many courses"
 
-Course ||--o{ Module : "1 course has many Modules" 
+Course ||--o{ Module : "1 course has many Modules"
+Course ||--o{ Enrollment : "1 course has many enrollments"
 
 Collaboration }o--|| User : "A learner has one tutor"
 Collaboration ||--o{ User : "A tutor has many learners"
@@ -149,6 +166,9 @@ Collaboration ||--o{ User : "A tutor has many learners"
 Module ||--o{ VideoContent : "Has"
 Module ||--o{ PDFContent : "Has"
 Module ||--o{ WebLink : "Has"
+
+User ||--o{ Enrollment : "1 learner enrolls in many courses"
+Course ||--o{ Enrollment : "1 course has many enrollments"
 
 note right of Module
 content_type determines which content table to use:

@@ -33,6 +33,8 @@ services:
             - lms_network
 
     # PRISMA STUDIO
+    # MUST BE REMOVED IN PRODUCTION
+    # ONLY FOR DEV PURPOSE
     prisma-studio:
         container_name: lms_prisma_studio
         build:

@@ -18,12 +18,12 @@ class CollaborationController {
 
 class CourseController {
   +createCourse(CourseDto: CourseDto): Course
-  +updateCourse(courseId: ObjectId, updateCourseDto: CourseDto): void
-  +deleteCourse(courseId: ObjectId): void
-  +getCourseById(courseId: ObjectId): Course
+  +updateCourse(courseId: number, updateCourseDto: CourseDto): void
+  +deleteCourse(courseId: number): void
+  +getCourseById(courseId: number): Course
   +getAllCourses(paginationDto : PaginationDto): Course[]
   +getAllCoursesByTutorId(tutorId : number): CourseDto[]
-  +getProgress(userId: number, courseId: ObjectId): Progress
+  +getProgress(userId: number, courseId: number): Progress
   +updateProgress(progressDto: UpdateProgressDto): void
 }
 
@@ -60,12 +60,12 @@ class CollaborationService {
 
 class CourseService {
   +createCourse(CourseDto: CourseDto): Course
-  +updateCourse(courseId: ObjectId, CourseDto: CourseDto): void
-  +deleteCourse(courseId: ObjectId): void
-  +getCourseById(courseId: ObjectId): CourseDto
+  +updateCourse(courseId: number, CourseDto: CourseDto): void
+  +deleteCourse(courseId: number): void
+  +getCourseById(courseId: number): CourseDto
   +getAllCourses(): CourseDto[]
   +getAllCoursesByTutorId(tutorId: number): CourseDto[]
-  +getProgress(userId: number, courseId: ObjectId): Progress
+  +getProgress(userId: number, courseId: number): Progress
   +updateProgress(progressDto: UpdateProgressDto): void
 }
 
@@ -118,7 +118,7 @@ class Message {
 }
 
 class Course {
-  +_id : ObjectId
+  +_id : number
   +title: string
   +description: string
   +tutor_id : number
@@ -129,7 +129,7 @@ class Course {
 }
 
 class Module {
-  +_id : ObjectId
+  +_id : number
   +content_type: string
   +content_value: string
 }

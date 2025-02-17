@@ -81,7 +81,7 @@ export class EnrollmentService {
 
   async getLearnerEnrolledCourses(leanerId: number) {
     try {
-      const learnerCourse = await this.prismaService.enrollment.findMany({
+      const learnerCourses = await this.prismaService.enrollment.findMany({
         where: {
           learnerId: leanerId,
         },
@@ -91,20 +91,18 @@ export class EnrollmentService {
               id: true,
               title: true,
               description: true,
-              tutor: {
-                select: {
-                  name: true,
-                  lastName: true,
-                },
-              },
+              createdAt: true,
             },
           },
         },
       });
-      return learnerCourse;
+
+      const courses = learnerCourses.map((enrollment) => enrollment.course);
+
+      return courses;
     } catch (error) {
       console.log(error);
-      throw new Error('Unable to fetch learner course');
+      throw new Error('Unable to fetch learner courses');
     }
   }
 
@@ -126,25 +124,6 @@ export class EnrollmentService {
 
       throw new BadRequestException('');
     }
-  }
-
-  async getLearnerCourseBaseOnEnrollment(learnerId: number) {
-    return await this.prismaService.enrollment.findMany({
-      where: { learnerId: learnerId },
-      select: {
-        course: {
-          include: {
-            modules: true,
-            tutor: {
-              select: {
-                name: true,
-                lastName: true,
-              },
-            },
-          },
-        },
-      },
-    });
   }
 
   async getUnenrolledLearners(tutorId: number, courseId: number) {
