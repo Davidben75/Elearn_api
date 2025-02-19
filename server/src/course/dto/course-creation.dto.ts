@@ -66,6 +66,10 @@ export class ModuleDto {
   @IsOptional()
   @IsNumber()
   pageCount?: number;
+
+  @IsOptional()
+  @IsString()
+  companyName?: string;
 }
 
 export class CourseCreationDto {

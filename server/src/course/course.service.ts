@@ -20,6 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CourseStatus, Prisma } from '@prisma/client';
 import { EnrollmentService } from 'src/enrollment/enrollment.service';
+import { degrees, PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 @Injectable()
 export class CourseService {
@@ -154,6 +155,9 @@ export class CourseService {
             });
             break;
           case ContentType.PDF:
+            const filePath = `./uploads/${moduleData.filePath}`;
+            await this.addWatermark(filePath, moduleData.companyName);
+            moduleData.pageCount = await this.getPageCount(filePath);
             await prisma.pDFContent.create({
               data: {
                 filePath: moduleData.filePath,
@@ -162,6 +166,7 @@ export class CourseService {
                 module: { connect: { id: moduleId } },
               },
             });
+
             break;
           case ContentType.WEBLINK:
             await prisma.weblink.create({
@@ -183,6 +188,35 @@ export class CourseService {
         );
       }
     });
+  }
+
+  private async addWatermark(inputPath: string, watermarkText: string) {
+    const existingPdfBytes = fs.readFileSync(inputPath);
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    const pages = pdfDoc.getPages();
+    for (const page of pages) {
+      const { width, height } = page.getSize();
+      page.drawText(watermarkText, {
+        x: width / 2 - 100,
+        y: height / 2,
+        size: 50,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+        opacity: 0.3, // Transparence
+        rotate: degrees(-45),
+      });
+    }
+
+    const modifiedPdfBytes = await pdfDoc.save();
+    fs.writeFileSync(inputPath, modifiedPdfBytes);
+  }
+
+  private async getPageCount(inputPath: string) {
+    const existingPdfBytes = fs.readFileSync(inputPath);
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    return pdfDoc.getPages().length;
   }
 
   // ----------

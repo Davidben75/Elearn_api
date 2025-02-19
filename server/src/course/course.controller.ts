@@ -132,6 +132,7 @@ export class CourseController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     const tutorId = req.user.id;
+    moduleDto.companyName = req.user.companyName;
     try {
       console.log(file);
 
