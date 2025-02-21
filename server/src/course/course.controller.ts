@@ -193,6 +193,7 @@ export class CourseController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const tutorId = req.user.id;
+    updateModule.companyName = req.user.companyName;
     try {
       if (updateModule.contentType === ContentType.PDF && !file) {
         throw new BadRequestException('PDF file is required');

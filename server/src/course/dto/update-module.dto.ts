@@ -49,6 +49,10 @@ export class UpdateModuleDto {
   originalName?: string;
 
   @IsOptional()
+  @IsString()
+  companyName?: string;
+
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   duration?: number;

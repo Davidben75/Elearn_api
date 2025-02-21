@@ -240,19 +240,22 @@ export class CourseService {
             'You are not authorized to perform this action',
           );
         }
-
         const contentId: string = data.contentId;
 
         const currentModuleInfo = await this.findModuleWithSpecificContent(
           moduleId,
           contentId,
         );
-
         // Check if the module exists
         if (!currentModuleInfo) {
           throw new NotFoundException('Module not found');
         }
-
+        // If file addwatermark and get pageCount
+        if (file) {
+          const filePath = `./uploads/${data.filePath}`;
+          await this.addWatermark(filePath, data.companyName);
+          data.pageCount = await this.getPageCount(filePath);
+        }
         // Update the content
         await this.updateContent(prisma, currentModuleInfo, data, file);
 
