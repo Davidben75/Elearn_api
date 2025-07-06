@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@css-inline/css-inline": "^0.14.3",
+    "@css-inline/css-inline-linux-x64-gnu": "^0.15.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/class-validator": "^0.13.4",
     "@nestjs/common": "^10.0.0",

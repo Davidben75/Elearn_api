@@ -1,5 +1,5 @@
 # Use Node.js 18 as the base image
-FROM node:22-slim
+FROM node:18-slim
 
 # Set working directory
 WORKDIR /usr/src/app
@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
     
 RUN npm install
+RUN npm install -g @nestjs/cli
 
 # Generate Prisma Client
 RUN npx prisma generate

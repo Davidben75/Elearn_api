@@ -1,13 +1,12 @@
-version: "3.8"
 services:
     # POSTGRES SERVER
     postgres-dev-db:
         image: postgres:14
-        container_name: lms_postgres
+        container_name: elearn_postgres
         environment:
-            POSTGRES_USER: davidpostgres
+            POSTGRES_USER: postgrestest
             POSTGRES_PASSWORD: 3f04bae72ad4bdc46b29dcd55e31da9a91a40cd8185995343dbe8093b41119e7
-            POSTGRES_DB: mylms
+            POSTGRES_DB: elearndb
         ports:
             - "5435:5432"
         volumes:
