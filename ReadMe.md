@@ -19,6 +19,16 @@ The **eLearn** backend is a RESTful API built using **[NestJS](https://nestjs.co
 
 ---
 
+## ⏳ Setup
+
+Before running the Docker containers, you need to create a `.env` file inside the `server/src/` directory with the following environment variables:
+
+```env
+POSTGRESQL_DB_URI="postgresql://postgrestest:3f04bae72ad4bdc46b29dcd55e31da9a91a40cd8185995343dbe8093b41119e7@postgres-dev-db:5432/elearndb?schema=public"
+JWT_SECRET="your_secret_key_here"
+```
+
+
 ## 🐳 Docker Usage
 ```bash
 docker-compose up --build
